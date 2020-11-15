@@ -9,7 +9,7 @@
 -- 				segregated it from functions that might be used in other procs. 
 --				If the CTO wishes this method can be scrapped and the other used.
 -- ======================================================================================
-CREATE OR ALTER FUNCTION [dbo].[UTL_fn_DelimListToTable] (  
+CREATE OR ALTER FUNCTION [dbo].[UTL_fn_DBSchemaObjCheck] (  
 	@strDelimitedStringToParse NVARCHAR(MAX)
 	
 	)
