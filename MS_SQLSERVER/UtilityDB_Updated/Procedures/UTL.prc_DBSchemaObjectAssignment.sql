@@ -1,11 +1,11 @@
 -- =============================================
--- Author:		Dave Babler
--- Create date: 11/09/2020
--- Description:	This procedure determines which database schema and object are being called, 
---              and will output those to the correct calling procedure.
---              REMINDER: the way to call objects is and always has been as such
---              DBNAME.SCHEMA.OBJECT, and continues to be so.
--- Subprocedures: 1. UTL.fn_DBSchemaObjCheck
+-- Author:			Dave Babler
+-- Create date: 	11/09/2020
+-- Description:		This procedure determines which database schema and object are being called, 
+--              	and will output those to the correct calling procedure.
+--              	REMINDER: the way to call objects is and always has been as such
+--              	DBNAME.SCHEMA.OBJECT, and continues to be so.
+-- Subprocedures: 	1. Utility.UTL.fn_DBSchemaObjCheck
 --
 -- =============================================
 CREATE	OR ALTER PROCEDURE UTL.prc_DBSchemaObjectAssignment
