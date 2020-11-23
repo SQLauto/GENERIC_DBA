@@ -2,19 +2,21 @@
 ---this comment exists only to force it near the top of the heap in a github pull request---babler
 -- ======================================================================================
 -- Author:		Dave Babler
--- Create date:	09/15/2020
--- Description:	Splits a (small) delimited list into a single column table 
---              thus allowing the table to be used in an "IN" clause in a different
---              query, procedure, or function. 
+-- Create date:	11/09/2020
+-- Description:	Splits a dot object notation string and passes it out as a table
+--              This is effectively a rehash of UTL_fn_DelimListToTable.
+--				However, the author felt it was important to hard code the period for saftey, and
+-- 				segregated it from functions that might be used in other procs. 
+--				If the CTO wishes this method can be scrapped and the other used.
 -- ======================================================================================
-CREATE OR ALTER FUNCTION [dbo].[UTL_fn_DelimListToTable] (  
+CREATE OR ALTER FUNCTION [UTL].[fn_DBSchemaObjCheck] (  
 	@strDelimitedStringToParse NVARCHAR(MAX)
-    , @charDelimiter CHAR(1)
-)
+	
+	)
 RETURNS @tblParsedList TABLE (ValueID INT, StringValue NVARCHAR(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS)
 AS
-
 BEGIN      
+DECLARE @charDelimiter CHAR = '.';
 WITH RecursiveTable (
 	StartingPosition
 	, EndingPosition
