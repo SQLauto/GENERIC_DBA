@@ -7,14 +7,18 @@ GO
 -- Author:		Dave Babler
 -- Create date: 08/31/2020
 -- Description:	This returns a list of tables and comments based on a guessed name
+-- Subprocedures: 1. UTL.prc_DBSchemaObjectAssignment
+
 -- =============================================
 CREATE PROCEDURE DD_TableNameLike 
 	-- Add the parameters for the stored procedure here
-	@strTableGuess NVARCHAR(64) 
+	@strTableGuess NVARCHAR(194) --64*3+2periods 
 
 AS
 BEGIN
     SET NOCOUNT ON;
+
+
 
 
  /** Always lowercase fuzzy paramaters 
@@ -23,7 +27,21 @@ BEGIN
 -- DECLARE @strTableNameLower NVARCHAR(64) = lower(@strTableGuess);--System Funcs always ALL CAPS except lower because its 'lower'
 -- DECLARE @strTableNameLowerFuzzy NVARCHAR(80) = '%' + @strTableNameLower + '%';  --split to to declare to show work, can be done one line
 
-DECLARE @strTableNameLowerFuzzy NVARCHAR(80) = '%' + lower(@strTableGuess) +'%';
+DECLARE @strTableNameLowerFuzzy NVARCHAR(80)
+    , @ustrDatabaseName NVARCHAR(64)
+	, @ustrSchemaName NVARCHAR(64)
+	, @ustrObjectName NVARCHAR(64);
+
+
+EXEC UTL.prc_DBSchemaObjectAssignment @strTableGuess, @ustrDatabaseName OUTPUT, @ustrSchemaName OUTPUT, @ustrObjectName OUTPUT;
+
+
+
+
+
+
+
+SET @strTableNameLowerFuzzy = '%' + lower(@ustrObjectName) +'%';
 
 /**When creating dynamic SQL leave one fully working example with filled in paramaters
 * This way when the next person to come along to debug it sees it they know exactly what you are looking for

@@ -24,7 +24,7 @@ BEGIN TRY
 	DECLARE @bitSchemaExists BIT = 0;
 	DECLARE @intNumPiecesEntered INT = 0;
 	DECLARE @ustrDefaultSchema NVARCHAR(64) = 'dbo';--WE WOULD FILL THIS IN.
-	DECLARE @ustrDefaultDatabase NVARCHAR(64) = 'AdventureWorks2012';
+	DECLARE @ustrDefaultDatabase NVARCHAR(64) = 'mapbenefits';
 	DECLARE @intDesiredPiece INT;
 	DECLARE @ustrSQLToExecute NVARCHAR(4000);-- highly unlikely it would be longer in this proc.
 	DECLARE @uDynamSQLParams NVARCHAR(2000) = N'@intDesiredPiece_ph INT, @ustrObjectFromTemp_ph NVARCHAR(64) OUTPUT';
@@ -39,7 +39,6 @@ BEGIN TRY
 	--GET MAX COUNT OF ROWID USE THAT TO DETERMINE LOGIC  IF NO PERIODS SKIP LOGIC USE DEFAULTS
 	SET @intDelimCountChecker = CHARINDEX('.', @strQualifiedObjectBeingCalled);
 
-	PRINT @intDelimCountChecker;
 
 	IF @intDelimCountChecker > 0
 	BEGIN
@@ -108,12 +107,14 @@ BEGIN TRY
 		SET @ustrSchemaName = @ustrDefaultSchema;
 		SET @ustrDatabaseName = @ustrDefaultDatabase;
 		SET @ustrObjectName = @strQualifiedObjectBeingCalled;
+
 			--check info schema to make sure the schmea and the db actually exist.
 	END
+			PRINT @ustrSchemaName + ' ' + @ustrDatabaseName + ' ' +  @ustrObjectName;
 END TRY
 
 BEGIN CATCH
-	INSERT INTO dbo.DB_EXCEPTION_TANK
+	INSERT INTO UTL.DB_EXCEPTION_TANK
 	VALUES (
 		SUSER_SNAME()
 		, ERROR_NUMBER()
