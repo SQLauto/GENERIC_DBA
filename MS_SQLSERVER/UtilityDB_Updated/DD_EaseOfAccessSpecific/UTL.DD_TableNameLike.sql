@@ -9,7 +9,7 @@ GO
 -- Author:		Dave Babler
 -- Create date: 08/31/2020
 -- Description:	This returns a list of tables and comments based on a guessed name
--- Subprocedures: 1. UTL.prc_DBSchemaObjectAssignment
+-- Subprocedures: 1. Utility.UTL.prc_DBSchemaObjectAssignment
 -- =============================================
 CREATE OR ALTER PROCEDURE UTL.DD_TableNameLike
 	-- Add the parameters for the stored procedure here
