@@ -18,6 +18,7 @@ DECLARE @vrtComment SQL_VARIANT
 	, @ustrSchemaName NVARCHAR(64)
 	, @ustrObjectName NVARCHAR(64)
 	, @dSQLNotExistCheck NVARCHAR(MAX)
+	, @dSQLNotExistCheckProperties NVARCHAR(MAX) -- could recycle previous var, don't want to
 	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of wether or not we add or update hence 'apply'
 	, @intRowCount INT; --minimal dynamic injection prevention, not going crazy as only devs will call this
 
@@ -37,7 +38,7 @@ BEGIN TRY
 
 			/**Check to see if the column or table actually exists -- Babler*/
 	
-			
+			--yes BELOW WOULD BE very vulnerable to injection. This is a data dictionary function, nobody but devs and DBAs will ever use it.
 	SET @dSQLNotExistCheck = N'SELECT 1
 									FROM INFORMATION_SCHEMA.TABLES
 									WHERE 	TABLE_NAME = '
@@ -88,6 +89,64 @@ BEGIN TRY
 				, 1
 				);
 	END
+ELSE
+				/**Here we have to first check to see if a MS_Description Exists
+                        * If the MS_Description does not exist will will use the ADD procedure to add the comment
+                        * If the MS_Description tag does exist then we will use the UPDATE procedure to add the comment
+                        * Normally it's just a simple matter of ALTER TABLE/ALTER COLUMN ADD COMMENT, literally every other system
+                        * however, Microsoft Has decided to use this sort of registry style of documentation 
+                        * -- Dave Babler 2020-08-26*/
+		SET @intRowCount = NULL;
+		--future DBA's reading this...I can already hear your wailing and gnashing of teeth about SQL Injection. Stow it, on only DBA's and devs will use this, it won't be customer facing.
+		SET @dSQLNotExistCheckProperties = N' SELECT NULL
+											  FROM 	'
+											  + QUOTENAME(@ustrDatabaseName)
+											  + '.sys.extended_properties'
+											  + ' WHERE [major_id] = OBJECT_ID('
+											  + ''''
+											  + @ustrSchemaName
+
+											  + '.'
+
+											  + @ustrObjectName
+											  + ''''
+											  + ')'
+											  +	' AND [name] = N''MS_Description''
+					AND [minor_id] = 0';
+		PRINT @dSQLNotExistCheckProperties;
+
+		EXEC sp_executesql @dSQLNotExistCheckProperties;
+
+		SET @intRowCount = @@ROWCOUNT;
+
+		PRINT @intRowCount;
+
+		/* do an if rowcount = 0 next */
+	-- 	IF NOT EXISTS (
+	-- 			SELECT NULL
+	-- 			FROM SYS.EXTENDED_PROPERTIES
+	-- 			WHERE [major_id] = OBJECT_ID(@ustrObjectName)
+	-- 				AND [name] = N'MS_Description'
+	-- 				AND [minor_id] = 0
+	-- 			)
+    --             /** Need to execute dynamically see here
+    --              https://stackoverflow.com/questions/20757804/execute-stored-procedure-from-stored-procedure-w-dynamic-sql-capturing-output 
+    --               also will need to call it as [DBNAME].sys.sp_addextendedproperty*/
+
+	-- 		EXECUTE sp_addextendedproperty @name = N'MS_Description'
+	-- 			, @value = @vrtComment
+	-- 			, @level0type = N'SCHEMA'
+	-- 			, @level0name = @ustrSchemaName
+	-- 			, @level1type = N'TABLE'
+	-- 			, @level1name = @strTableName;
+	-- 	ELSE
+	-- 		EXECUTE sp_updateextendedproperty @name = N'MS_Description'
+	-- 			, @value = @vrtComment
+	-- 			, @level0type = N'SCHEMA'
+	-- 			, @level0name = N'dbo'
+	-- 			, @level1type = N'TABLE'
+	-- 			, @level1name = @strTableName;
+	-- END
 
 	
 	SET NOCOUNT OFF
@@ -158,6 +217,14 @@ BEGIN CATCH
 END CATCH;
 /*Dynamic Queries
 	-- if not exists
+
+	-- properties if not exists
+
+				SELECT NULL
+				FROM QUOTENAME(@ustrDatabaseName).SYS.EXTENDED_PROPERTIES
+				WHERE [major_id] = OBJECT_ID(@ustrObjectName)
+					AND [name] = N'MS_Description'
+					AND [minor_id] = 0
 
 
 	*/
