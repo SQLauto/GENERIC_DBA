@@ -68,3 +68,10 @@ BEGIN CATCH
 		, GETDATE()
 		);
 END CATCH;
+/**
+ Dynamic SQL in this procedure
+SELECT 1
+FROM QUOTENAME(@ustrQuotedDB).INFORMATION_SCHEMA.TABLES
+WHERE 	TABLE_NAME = @ustrTable 
+    AND TABLE_SCHEMA = @ustrSchema
+*/
