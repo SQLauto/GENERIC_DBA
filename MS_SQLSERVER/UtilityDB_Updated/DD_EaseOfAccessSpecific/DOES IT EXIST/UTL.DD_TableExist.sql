@@ -40,6 +40,8 @@ BEGIN TRY
 
 
 
+	SET @intRowCount = @@ROWCOUNT; 
+
 
 	IF @intRowCount <> 1
 	BEGIN

@@ -20,9 +20,14 @@ DECLARE @vrtComment SQL_VARIANT
 	, @dSQLNotExistCheck NVARCHAR(MAX)
 	, @dSQLNotExistCheckProperties NVARCHAR(MAX) -- could recycle previous var, don't want to
 	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of wether or not we add or update hence 'apply'
-	, @intRowCount INT; --minimal dynamic injection prevention, not going crazy as only devs will call this
+	, @intRowCount INT
+	, @boolExistFlag BIT
+	, @ustrMessageOut NVARCHAR(400)
+	;
+DECLARE @ustrVariantConv NVARCHAR(MAX) = CAST(@vrtComment AS NVARCHAR(MAX)); -- leaving this conversion instead of just declaring as nvarchar. Technically it IS stored as variant, people should be aware of this.
+--still consider removing this conversion from production and just leaving good code comments.
 
-DECLARE @boolCatchFlag BIT = 0;
+DECLARE @boolCatchFlag BIT = 0;  -- for catching and throwing a specific error. 
 
 SET @vrtComment = CAST(@strComment AS SQL_VARIANT);   --have to convert this to variant type as that's what the built in sp asks for.
 
@@ -37,37 +42,21 @@ BEGIN TRY
 												, @ustrObjectName OUTPUT;
 
 			/**Check to see if the column or table actually exists -- Babler*/
+		
+		EXEC Utility.UTL.DD_TableExist @ustrObjectName
+			, @ustrDatabaseName
+			, @ustrSchemaName
+			, @boolExistFlag OUTPUT
+			, @ustrMessageOut OUTPUT;
+			print 'bool exist flag is below';
+			print @boolExistFlag;
 	
-			--yes BELOW WOULD BE very vulnerable to injection. This is a data dictionary function, nobody but devs and DBAs will ever use it.
-	SET @dSQLNotExistCheck = N'SELECT 1
-									FROM INFORMATION_SCHEMA.TABLES
-									WHERE 	TABLE_NAME = '
-									+ ''''
-									+ @ustrObjectName
-									+ ''''
-									+ '	AND	TABLE_SCHEMA = '
-									+ ''''
-									+  @ustrSchemaName
-									+ ''''
-									+ ' AND lower(TABLE_CATALOG) = lower('
-									+ ''''
-									+ @ustrDatabaseName
-									+ ''''
-									+ ')'
-		;
-
-		print @dSQLNotExistCheck;
-
-	EXEC sp_executesql @dSQLNotExistCheck;
-	SET @intRoWCount = @@ROWCOUNT; --set rowcount checker to the output of rows from the dynamic SQL
-	print 'int count'
-	print @intRowCount;
 	
-	IF @intRoWCount = 0
+	IF @boolExistFlag = 0
 	BEGIN
 		--if it does not exist raise error and send to the exception tank
 		SET @boolCatchFlag = 1;
-		SET @strErrorMessage = CONCAT('Attempt to add comment on table '
+/* 		SET @strErrorMessage = CONCAT('Attempt to add comment on table '
 										, @ustrDatabaseName
 										, '.'
 										, @ustrSchemaName
@@ -79,12 +68,12 @@ BEGIN TRY
 										, @ustrSchemaName
 										, '.'
 										, @ustrObjectName
-										, ' does not exist, check spelling, try again?');
+										, ' does not exist, check spelling, try again?'); */
 
 		PRINT @strErrorMessage;
 
 		RAISERROR (
-				@strErrorMessage
+				@ustrMessageOut
 				, 11
 				, 1
 				);
@@ -122,6 +111,31 @@ ELSE
 		PRINT @intRowCount;
 
 		/* do an if rowcount = 0 next */
+		IF @intRowCount = 0 
+			BEGIN
+				SET @dSQLApplyComment = N'EXEC ' 
+										+ @ustrDatabaseName 
+										+ '.'
+										+ 'sys.sp_addextendedproperty '
+										+ '@name = N''MS_Description'' '
+										+ ', @value = '
+										+ ''''
+										+  @ustrVariantConv
+										+ ''''
+										+ ', @level0type = N''SCHEMA'' '
+										+ ', @level0name = '
+										+ ''''
+										+ 	@ustrSchemaName
+										+ ''''
+										+ ', @level1type = N''TABLE'' '
+										+ ', @level1name = '
+										+ ''''
+										+	@ustrObjectName
+										+ '''';
+				PRINT @dSQLApplyComment;
+				EXEC sp_executesql @dSQLApplyComment
+	
+			END
 	-- 	IF NOT EXISTS (
 	-- 			SELECT NULL
 	-- 			FROM SYS.EXTENDED_PROPERTIES
@@ -197,7 +211,7 @@ BEGIN CATCH
 		WITH mxe
 		AS (
 			SELECT MAX(ErrorID) AS MaxError
-			FROM DB_EXCEPTION_TANK
+			FROM Utility.UTL.DB_EXCEPTION_TANK
 			)
 		SELECT ErrorID
 			, UserName
@@ -207,7 +221,7 @@ BEGIN CATCH
 			, ErrorProcedure
 			, ErrorMessage
 			, ErrorDateTime
-		FROM DB_EXCEPTION_TANK et
+		FROM Utility.UTL.DB_EXCEPTION_TANK et
 		INNER JOIN mxe
 			ON et.ErrorID = mxe.MaxError
 
