@@ -1,10 +1,11 @@
--- =============================================
+-- ==========================================================================================
 -- Author:		    Dave Babler
 -- Create date:     08/25/2020
 -- Last Modified:   11/23/2020
 -- Description:	    Checks to see if column in table exists 
 --                  use output boolean for logic flow in other procedures
--- =============================================
+-- 					This will work just fine for Views without further modifciation.
+-- ==========================================================================================
 CREATE
 	OR
 
