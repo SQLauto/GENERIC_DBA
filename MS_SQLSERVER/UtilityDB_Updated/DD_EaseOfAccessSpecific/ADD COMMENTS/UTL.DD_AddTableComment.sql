@@ -136,6 +136,9 @@ ELSE
 				EXEC sp_executesql @dSQLApplyComment
 	
 			END
+
+
+			---WARNING will need to add a 'viw' looker to see if we need to do a view instead of a table
 	-- 	IF NOT EXISTS (
 	-- 			SELECT NULL
 	-- 			FROM SYS.EXTENDED_PROPERTIES
