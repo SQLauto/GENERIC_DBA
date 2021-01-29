@@ -58,14 +58,26 @@ BEGIN TRY
 END TRY
 
 BEGIN CATCH
-	INSERT INTO Utility.UTL.DB_EXCEPTION_TANK
+
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
 	VALUES (
-		SUSER_SNAME()
+		DB_NAME()
+		, SUSER_SNAME()
 		, ERROR_NUMBER()
 		, ERROR_STATE()
 		, ERROR_SEVERITY()
-		, ERROR_PROCEDURE()
 		, ERROR_LINE()
+		, ERROR_PROCEDURE()
 		, ERROR_MESSAGE()
 		, GETDATE()
 		);

@@ -1,7 +1,7 @@
 -- ==========================================================================================
 -- Author:		    Dave Babler
 -- Create date:     08/25/2020
--- Last Modified:   11/23/2020
+-- Last Modified:   01/29/2020
 -- Description:	    Checks to see if column in table exists 
 --                  use output boolean for logic flow in other procedures
 -- 					This will work just fine for Views without further modifciation.
@@ -61,14 +61,26 @@ BEGIN TRY
 END TRY
 
 BEGIN CATCH
-	INSERT INTO Utility.UTL.DB_EXCEPTION_TANK
+
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
 	VALUES (
-		SUSER_SNAME()
+		DB_NAME()
+		, SUSER_SNAME()
 		, ERROR_NUMBER()
 		, ERROR_STATE()
 		, ERROR_SEVERITY()
-		, ERROR_PROCEDURE()
 		, ERROR_LINE()
+		, ERROR_PROCEDURE()
 		, ERROR_MESSAGE()
 		, GETDATE()
 		);

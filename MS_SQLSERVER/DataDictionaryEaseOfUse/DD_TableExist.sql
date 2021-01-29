@@ -34,17 +34,33 @@ SET NOCOUNT OFF;
 END TRY
 
 
-
 BEGIN CATCH
-	INSERT INTO dbo.DB_EXCEPTION_TANK
+
+/**Should you chose to run an excepton tank for each database then you'll need to do this with 
+*   DynamicSQL  
+*   For fun I have decided to store all of the exceptions in a log database -- Dave Babler */
+
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
 	VALUES (
-		SUSER_SNAME()
+		DB_NAME()
+		, SUSER_SNAME()
 		, ERROR_NUMBER()
 		, ERROR_STATE()
 		, ERROR_SEVERITY()
-		, ERROR_PROCEDURE()
 		, ERROR_LINE()
+		, ERROR_PROCEDURE()
 		, ERROR_MESSAGE()
 		, GETDATE()
 		);
 END CATCH;
+

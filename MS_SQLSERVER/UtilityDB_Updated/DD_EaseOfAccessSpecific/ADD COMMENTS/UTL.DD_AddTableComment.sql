@@ -86,7 +86,7 @@ ELSE
                         * however, Microsoft Has decided to use this sort of registry style of documentation 
                         * -- Dave Babler 2020-08-26*/
 		SET @intRowCount = NULL;
-		--future DBA's reading this...I can already hear your wailing and gnashing of teeth about SQL Injection. Stow it, on only DBA's and devs will use this, it won't be customer facing.
+		--future DBA's reading this...I can already hear your wailing and gnashing of teeth about SQL Injection. Stow it, only DBA's and devs will use this, it won't be customer facing.
 		SET @dSQLNotExistCheckProperties = N' SELECT NULL
 											  FROM 	'
 											  + QUOTENAME(@ustrDatabaseName)
@@ -136,7 +136,10 @@ ELSE
 				EXEC sp_executesql @dSQLApplyComment
 	
 			END
-
+		ELSE
+			BEGIN 
+				--DYNAMIC SQL FOR UPDATE EXTENDED PROPERTY GOES HERE.
+			END
 
 			---WARNING will need to add a 'viw' looker to see if we need to do a view instead of a table
 	-- 	IF NOT EXISTS (
