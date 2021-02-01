@@ -138,38 +138,82 @@ BEGIN TRY
 												+ @ustrObjectName
 											  	+ ''''
 												+								' )   )';
- PRINT @dSQLNotExistCheckProperties;
 
-	/* 	IF NOT EXISTS (
-				SELECT NULL
-				FROM SYS.EXTENDED_PROPERTIES
-				WHERE [major_id] = OBJECT_ID(@strTableName)
-					AND [name] = N'MS_Description'
-					AND [minor_id] = (
-						SELECT [column_id]
-						FROM SYS.COLUMNS
-						WHERE [name] = @strColumnName
-							AND [object_id] = OBJECT_ID(@strTableName)
-						)
-				)
-			EXECUTE sp_addextendedproperty @name = N'MS_Description'
-				, @value = @vrtComment
-				, @level0type = N'SCHEMA'
-				, @level0name = N'dbo'
-				, @level1type = N'TABLE'
-				, @level1name = @strTableName
-				, @level2type = N'COLUMN'
-				, @level2name = @strColumnName;
-		ELSE
-			EXECUTE sp_updateextendedproperty @name = N'MS_Description'
-				, @value = @vrtComment
-				, @level0type = N'SCHEMA'
-				, @level0name = N'dbo'
-				, @level1type = N'TABLE'
-				, @level1name = @strTableName
-				, @level2type = N'COLUMN'
-				, @level2name = @strColumnName; */
-	END
+			INSERT INTO #__SuppressOutputAddColumnComment
+			EXEC sp_executesql @dSQLNotExistCheckProperties;
+
+			SET @intRowCount = @@ROWCOUNT;
+
+		 --if the row count is zero we know we need to add the property not update it.
+
+			IF @intRowCount = 0 
+				BEGIN
+					SET @dSQLApplyComment = N'EXEC ' 
+											+ @ustrDatabaseName 
+											+ '.'
+											+ 'sys.sp_addextendedproperty '
+											+ '@name = N''MS_Description'' '
+											+ ', @value = '
+											+ ''''
+											+  @ustrVariantConv
+											+ ''''
+											+ ', @level0type = N''SCHEMA'' '
+											+ ', @level0name = N'
+											+ ''''
+											+ 	@ustrSchemaName
+											+ ''''
+											+ ', @level1type = N'
+											+ ''''
+											+ 	@ustrViewOrTable
+											+ ''''										
+											+ ', @level1name = '
+											+ ''''
+											+	@ustrObjectName
+											+ ''''
+											+ ', @level2type = N''COLUMN'' '
+											+ ', @level2name = N'
+											+ ''''
+											+  @strColumnName
+											+ ''''
+											;	
+				END
+			ELSE 
+				BEGIN 
+									SET @dSQLApplyComment = N'EXEC ' 
+											+ @ustrDatabaseName 
+											+ '.'
+											+ 'sys.sp_updateextendedproperty '
+											+ '@name = N''MS_Description'' '
+											+ ', @value = '
+											+ ''''
+											+  @ustrVariantConv
+											+ ''''
+											+ ', @level0type = N''SCHEMA'' '
+											+ ', @level0name = N'
+											+ ''''
+											+ 	@ustrSchemaName
+											+ ''''
+											+ ', @level1type = N'
+											+ ''''
+											+ 	@ustrViewOrTable
+											+ ''''										
+											+ ', @level1name = '
+											+ ''''
+											+	@ustrObjectName
+											+ ''''
+											+ ', @level2type = N''COLUMN'' '
+											+ ', @level2name = N'
+											+ ''''
+											+  @strColumnName
+											+ ''''
+											;	
+				END
+
+	END 
+		INSERT INTO #__SuppressOutputAddColumnComment
+		EXEC sp_executesql @dSQLApplyComment;
+		DROP TABLE IF EXISTS #__SuppressOutputAddColumnComment;
+	SET NOCOUNT OFF
 END TRY
 
 BEGIN CATCH
@@ -268,7 +312,24 @@ END CATCH
 						WHERE [name] = @strColumnName
 							AND [object_id] = OBJECT_ID(@strTableName);
 
-
+		-- add properties
+			EXECUTE sp_addextendedproperty @name = N'MS_Description'
+				, @value = @vrtComment
+				, @level0type = N'SCHEMA'
+				, @level0name = N'dbo'
+				, @level1type = N'TABLE'
+				, @level1name = @strTableName
+				, @level2type = N'COLUMN'
+				, @level2name = @strColumnName;
+		-- update properties
+						EXECUTE sp_updateextendedproperty @name = N'MS_Description'
+				, @value = @vrtComment
+				, @level0type = N'SCHEMA'
+				, @level0name = N'dbo'
+				, @level1type = N'TABLE'
+				, @level1name = @strTableName
+				, @level2type = N'COLUMN'
+				, @level2name = @strColumnName;
 	*/
 
 
@@ -289,5 +350,7 @@ END CATCH
 	EXEC Utility.UTL.DD_AddColumnComment @ustrFullyQualifiedTable
 		, @strColName
 		, @ustrComment; 
+		
 	
 */
+EXEC Utility.sys.sp_addextendedproperty @name = N'MS_Description' , @value = 'This is a comment for column2', @level0type = N'SCHEMA' , @level0name = 'dbo', @level1type = N'TABLE', @level1name = 'TestColumns', @level2type = N'Column_2'

@@ -106,12 +106,9 @@ ELSE
 											  + ' WHERE [major_id] = OBJECT_ID('
 											  + ''''
 											  + @ustrDatabaseName
-
 											  + '.'
 											  + @ustrSchemaName
-
 											  + '.'
-
 											  + @ustrObjectName
 											  + ''''
 											  + ')'
@@ -181,7 +178,7 @@ ELSE
 				INSERT INTO #__SuppressOutputAddTableComment
 				EXEC sp_executesql @dSQLApplyComment;
 
-
+	DROP TABLE IF EXISTS #__SuppressOutputAddTableComment;
 	SET NOCOUNT OFF
 END TRY
 
