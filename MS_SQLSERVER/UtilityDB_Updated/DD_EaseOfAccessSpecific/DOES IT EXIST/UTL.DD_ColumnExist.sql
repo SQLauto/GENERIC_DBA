@@ -33,7 +33,7 @@ BEGIN TRY
 		;
 
 
-
+	
 
 	EXECUTE sp_executesql @SQLCheckForTable
 		, N'@ustrTable NVARCHAR(64), 
@@ -44,7 +44,7 @@ BEGIN TRY
         , @ustrColumn = @ustrColumnName;
 
 
-
+	SET @intRowCount = @@ROWCOUNT; 
 
     IF @intRowCount <> 1
 	BEGIN
@@ -85,3 +85,28 @@ BEGIN CATCH
 		, GETDATE()
 		);
 END CATCH;
+
+
+
+
+
+--TESTING BLOCK
+/**
+
+DECLARE @ustrTableName NVARCHAR(64) = '';
+DECLARE @ustrDBName NVARCHAR(64) = '';
+DECLARE @ustrColumnName NVARCHAR(64) = ''
+DECLARE @ustrSchemaName NVARCHAR(64) = '';
+DECLARE @boolSuccessFlag BIT;
+DECLARE @ustrMessageOut NVARCHAR(400);
+
+EXEC Utility.UTL.DD_ColumnExist @ustrTableName
+	, @ustrColumnName
+	, @ustrDBName
+	, @ustrSchemaName
+	, @boolSuccessFlag OUTPUT
+	, @ustrMessageOut OUTPUT;
+
+SELECT @boolSuccessFlag
+	, @ustrMessageOut;
+*/

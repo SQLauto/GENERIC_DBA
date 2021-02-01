@@ -43,6 +43,7 @@ BEGIN TRY
 	SET @intRowCount = @@ROWCOUNT; 
 
 
+
 	IF @intRowCount <> 1
 	BEGIN
 		SET @boolSuccessFlag = 0;
@@ -88,4 +89,22 @@ SELECT 1
 FROM QUOTENAME(@ustrQuotedDB).INFORMATION_SCHEMA.TABLES
 WHERE 	TABLE_NAME = @ustrTable 
     AND TABLE_SCHEMA = @ustrSchema
+*/
+
+--TESTING BLOCK
+/**
+DECLARE @ustrTableName NVARCHAR(64) = '';
+DECLARE @ustrDBName NVARCHAR(64) = '';
+DECLARE @ustrSchemaName NVARCHAR(64) = '';
+DECLARE @boolSuccessFlag BIT;
+DECLARE @ustrMessageOut NVARCHAR(400);
+
+EXEC Utility.UTL.DD_TableExist @ustrTableName
+	, @ustrDBName
+	, @ustrSchemaName
+	, @boolSuccessFlag OUTPUT
+	, @ustrMessageOut OUTPUT;
+
+SELECT @boolSuccessFlag
+	, @ustrMessageOut;
 */
