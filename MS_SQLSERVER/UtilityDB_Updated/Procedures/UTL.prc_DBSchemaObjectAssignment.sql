@@ -28,7 +28,7 @@ BEGIN TRY
 	DECLARE @intDesiredPiece INT;
 	DECLARE @ustrSQLToExecute NVARCHAR(4000);-- highly unlikely it would be longer in this proc.
 	DECLARE @uDynamSQLParams NVARCHAR(2000) = N'@intDesiredPiece_ph INT, @ustrObjectFromTemp_ph NVARCHAR(64) OUTPUT';
-		--we use this "p"lace "h"older in dyanmicsql.
+		--we use this "p"lace "h"older in dyanmicSQL.
 
 	CREATE TABLE #tblObjectBreakdown (
 		intPosition INT
@@ -53,8 +53,8 @@ BEGIN TRY
 		IF @intNumPiecesEntered = 3
 			/*Ostensibly all 3 pieces are entered so let's check that and then assign them */
 		BEGIN
-			/**Normally I disapprove of directly injecting table, schema, or object names into dynamic sql.
-                    * In this case, we are ok becasue all we are using a temporary table that WE built, and we are assigning variables
+			/**Normally I disapprove of directly injecting table, schema, or object names into dynamic SQL.
+                    * In this case, we are ok because all we are using a temporary table that WE built, and we are assigning variables
                     * and as such it should be cool.  Dave Babler 2020-11-15 */
 			--rip through the pieces and assign them to outputs
 			SET @ustrSQLTOExecute = 
@@ -110,7 +110,7 @@ BEGIN TRY
 
 			--check info schema to make sure the schmea and the db actually exist.
 	END
-			PRINT @ustrSchemaName + ' ' + @ustrDatabaseName + ' ' +  @ustrObjectName;
+			-- PRINT @ustrSchemaName + ' ' + @ustrDatabaseName + ' ' +  @ustrObjectName;
 END TRY
 
 

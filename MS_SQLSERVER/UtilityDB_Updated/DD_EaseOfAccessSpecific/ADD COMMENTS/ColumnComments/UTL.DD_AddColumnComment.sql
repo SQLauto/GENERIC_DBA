@@ -12,7 +12,7 @@ GO
 CREATE
 	OR
 
-ALTER PROCEDURE DD_AddColumnComment
+ALTER PROCEDURE UTL.DD_AddColumnComment
 	-- Add the parameters for the stored procedure here
 	@strTableName NVARCHAR(64)
 	, @strColumnName NVARCHAR(64)
@@ -34,6 +34,7 @@ DECLARE @vrtComment SQL_VARIANT
 	, @bitIsThisAView BIT
 	, @ustrViewOrTable NVARCHAR(8)
 	;
+DROP TABLE IF EXISTS #__SuppressOutputAddColumnComment;
 
 DECLARE @boolCatchFlag BIT = 0;  -- for catching and throwing a specific error. 
 	--set and internally cast the VARIANT, I know it's dumb, but it's what we have to do.
@@ -46,24 +47,55 @@ DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MA
  *	2.	We need to deal with quotes passed in for Contractions such as "can't" which would be passed in as "can''t"
  */
 
+
+	CREATE TABLE #__SuppressOutputAddColumnComment (
+		SuppressedOutput VARCHAR(MAX)
+	);
 BEGIN TRY
 	SET NOCOUNT ON;
+		--we do this type of insert to prevent seeing useless selects in the grid view on a SQL developer
+	INSERT INTO #__SuppressOutputAddColumnComment
+	EXEC Utility.UTL.prc_DBSchemaObjectAssignment @strTableName
+												, @ustrDatabaseName OUTPUT
+												, @ustrSchemaName OUTPUT
+												, @ustrObjectName OUTPUT;
+	
+	 /**REVIEW: if it becomes a problem where people are typing in tables wrong  all the time (check the exception log)
+	 * we can certainly add the Utility.UTL.DD_TableExist first and if that fails just dump the procedure and show an error message
+	 * for now though checking for the column will also show bad table names but won't specify that it's the table, just an error
+	 	-- Dave Babler 
+	 */
 
-	IF NOT EXISTS (
-			/**Check to see if the column or table actually exists -- Babler*/
-			SELECT 1
-			FROM INFORMATION_SCHEMA.COLUMNS
-			WHERE TABLE_NAME = @strTableName
-				AND COLUMN_NAME = @strColumnName
-			)
+	 
+	INSERT INTO #__SuppressOutputAddColumnComment
+	EXEC Utility.UTL.DD_ColumnExist @ustrObjectName
+		, @strColumnName
+		, @ustrDatabaseName
+		, @ustrSchemaName
+		, @boolExistFlag OUTPUT
+		, @ustrMessageOut OUTPUT;
+
+
+		/** Next Check to see if the name is for a view instead of a table, alter the function to fit your agency's naming conventions
+		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
+		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
+		  */
+		SET @bitIsThisAView = Utility.UTL.fn_IsThisTheNameOfAView(@ustrObjectName);
+
+		IF @bitIsThisAView = 0
+			SET @ustrViewOrTable = 'TABLE';
+		ELSE
+			SET @ustrViewOrTable = 'VIEW';
+
+	IF @boolExistFlag = 0
 	BEGIN
-		--if it does not exist raise error and send to the exception tank
+
 		SET @boolCatchFlag = 1;
-		SET @strErrorMessage = 'Attempt to add comment on column ' + @strColumnName + ' of ' + @strTableName + ';however, either ' + 
-			@strColumnName + ' or ' + @strTableName + ' does not exist, check spelling, try again?';
+
+
 
 		RAISERROR (
-				@strErrorMessage
+				@ustrMessageOut
 				, 11
 				, 1
 				);
@@ -76,7 +108,39 @@ BEGIN TRY
                 * Normally it's just a simple matter of ALTER TABLE/ALTER COLUMN ADD COMMENT, literally every other system
                 * however, Microsoft Has decided to use this sort of registry style of documentation 
                 * -- Dave Babler 2020-08-26*/
-		IF NOT EXISTS (
+
+		SET @intRowCount = NULL;
+		SET @dSQLNotExistCheckProperties = N' SELECT NULL
+											FROM '
+												+ QUOTENAME(@ustrDatabaseName)
+											  	+ '.sys.extended_properties'
+											  	+ ' WHERE [major_id] = OBJECT_ID('
+											  	+ ''''
+											  	+ @ustrDatabaseName
+											  	+ '.'
+											  	+ @ustrSchemaName
+											  	+ '.'
+											  	+ @ustrObjectName
+											  	+ ''''
+											  	+ ')'
+											  	+	' AND [name] = N''MS_Description''		
+													  AND [minor_id] =	(				
+														  SELECT [column_id]
+															FROM '
+															+ QUOTENAME(@ustrDatabaseName)
+															+ '.sys.columns
+															WHERE [name] =  '
+												+ ''''
+												+ @strColumnName
+											  	+ ''''
+												+ ' AND [object_id] = OBJECT_ID( '
+												+ ''''
+												+ @ustrObjectName
+											  	+ ''''
+												+								' )   )';
+ PRINT @dSQLNotExistCheckProperties;
+
+	/* 	IF NOT EXISTS (
 				SELECT NULL
 				FROM SYS.EXTENDED_PROPERTIES
 				WHERE [major_id] = OBJECT_ID(@strTableName)
@@ -104,43 +168,62 @@ BEGIN TRY
 				, @level1type = N'TABLE'
 				, @level1name = @strTableName
 				, @level2type = N'COLUMN'
-				, @level2name = @strColumnName;
+				, @level2name = @strColumnName; */
 	END
 END TRY
 
 BEGIN CATCH
 	IF @boolCatchFlag = 1
 	BEGIN
-		INSERT INTO dbo.DB_EXCEPTION_TANK (
-			UserName
-			, ErrorState
-			, ErrorSeverity
-			, ErrorProcedure
-			, ErrorMessage
-			, ErrorDateTime
-			)
-		VALUES (
-			SUSER_SNAME()
-			, ERROR_STATE()
-			, ERROR_SEVERITY()
-			, ERROR_PROCEDURE()
-			, ERROR_MESSAGE()
-			, GETDATE()
-			);
+
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
+	VALUES (
+		DB_NAME()
+		, SUSER_SNAME()
+		, ERROR_NUMBER()
+		, ERROR_STATE()
+		, ERROR_SEVERITY()
+		, ERROR_LINE()
+		, ERROR_PROCEDURE()
+		, ERROR_MESSAGE()
+		, GETDATE()
+		);
 	END
 	ELSE
 	BEGIN
-		INSERT INTO dbo.DB_EXCEPTION_TANK
-		VALUES (
-			SUSER_SNAME()
-			, ERROR_NUMBER()
-			, ERROR_STATE()
-			, ERROR_SEVERITY()
-			, ERROR_PROCEDURE()
-			, ERROR_LINE()
-			, ERROR_MESSAGE()
-			, GETDATE()
-			);
+
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
+	VALUES (
+		DB_NAME()
+		, SUSER_SNAME()
+		, ERROR_NUMBER()
+		, ERROR_STATE()
+		, ERROR_SEVERITY()
+		, ERROR_LINE()
+		, ERROR_PROCEDURE()
+		, ERROR_MESSAGE()
+		, GETDATE()
+		);
 	END
 
 	PRINT 
@@ -153,9 +236,10 @@ BEGIN CATCH
 		WITH mxe
 		AS (
 			SELECT MAX(ErrorID) AS MaxError
-			FROM DB_EXCEPTION_TANK
+			FROM CustomLog.ERR.DB_EXCEPTION_TANK
 			)
 		SELECT ErrorID
+			, DatabaseName
 			, UserName
 			, ErrorNumber
 			, ErrorState
@@ -163,11 +247,47 @@ BEGIN CATCH
 			, ErrorProcedure
 			, ErrorMessage
 			, ErrorDateTime
-		FROM DB_EXCEPTION_TANK et
+		FROM CustomLog.ERR.DB_EXCEPTION_TANK et
 		INNER JOIN mxe
 			ON et.ErrorID = mxe.MaxError
 
 		_____________________________
 
 '
-END CATCH;
+END CATCH
+
+	/*Dynamic Queries
+		-- IF NOT EXISTS
+			SELECT NULL
+				FROM QUOTENAME(@ustrDatabaseName).sys.extended_properties
+				WHERE [major_id] = OBJECT_ID(@strTableName)
+					AND [name] = N'MS_Description'
+					AND [minor_id] = (
+						SELECT [column_id]
+						FROM QUOTENAME(@ustrDatabaseName).sys.columns
+						WHERE [name] = @strColumnName
+							AND [object_id] = OBJECT_ID(@strTableName);
+
+
+	*/
+
+
+
+
+
+
+
+
+
+ --TESTING Bloc
+/* 
+
+	DECLARE @ustrFullyQualifiedTable NVARCHAR(64) = N'';
+	DECLARE @strColName VARCHAR(64) = '';
+	DECLARE @ustrComment NVARCHAR(400) = N'';
+
+	EXEC Utility.UTL.DD_AddColumnComment @ustrFullyQualifiedTable
+		, @strColName
+		, @ustrComment; 
+	
+*/
