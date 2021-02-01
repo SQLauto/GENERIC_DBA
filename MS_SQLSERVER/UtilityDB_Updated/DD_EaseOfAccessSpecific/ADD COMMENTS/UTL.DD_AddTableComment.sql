@@ -20,14 +20,15 @@ DECLARE @vrtComment SQL_VARIANT
 	, @ustrObjectName NVARCHAR(64)
 	, @dSQLNotExistCheck NVARCHAR(MAX)
 	, @dSQLNotExistCheckProperties NVARCHAR(MAX) -- could recycle previous var, don't want to
-	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of wether or not we add or update hence 'apply'
+	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of whether or not we add or update hence 'apply'
 	, @intRowCount INT
 	, @boolExistFlag BIT
 	, @ustrMessageOut NVARCHAR(400)
 	, @bitIsThisAView BIT
 	, @ustrViewOrTable NVARCHAR(8)
 	;
---still consider removing this conversion from production and just leaving good code comments.
+
+DROP TABLE IF EXISTS #__SuppressOutputAddTableComment; 
 
 DECLARE @boolCatchFlag BIT = 0;  -- for catching and throwing a specific error. 
 	--set and internally cast the VARIANT, I know it's dumb, but it's what we have to do.
@@ -40,11 +41,14 @@ DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MA
  *	2.	We need to deal with quotes passed in for Contractions such as "can't" which would be passed in as "can''t"
  */
 
-
+CREATE TABLE #__SuppressOutputAddTableComment (
+	SuppressedOutput VARCHAR(MAX)
+);
 
 BEGIN TRY
 	SET NOCOUNT ON;
 	--break apart the fully qualified object name
+	INSERT INTO #__SuppressOutputAddTableComment
 	EXEC Utility.UTL.prc_DBSchemaObjectAssignment @strTableName
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
@@ -52,12 +56,13 @@ BEGIN TRY
 
 
 			/**Check to see if the column or table actually exists -- Babler*/
-		
-		EXEC Utility.UTL.DD_TableExist @ustrObjectName
-			, @ustrDatabaseName
-			, @ustrSchemaName
-			, @boolExistFlag OUTPUT
-			, @ustrMessageOut OUTPUT;
+	INSERT INTO #__SuppressOutputAddTableComment
+	EXEC Utility.UTL.DD_TableExist @ustrObjectName
+		, @ustrDatabaseName
+		, @ustrSchemaName
+		, @boolExistFlag OUTPUT
+		, @ustrMessageOut OUTPUT;
+
 
 
 		/** Next Check to see if the name is for a view instead of a table, alter the function to fit your agency's naming conventions
@@ -113,7 +118,7 @@ ELSE
 											  +	' AND [name] = N''MS_Description''
 					AND [minor_id] = 0';
 
-
+		INSERT INTO #__SuppressOutputAddTableComment
 		EXEC sp_executesql @dSQLNotExistCheckProperties;
 
 		SET @intRowCount = @@ROWCOUNT;
@@ -173,8 +178,8 @@ ELSE
 										+ '''';
 
 			END
-
-				EXEC sp_executesql @dSQLApplyComment
+				INSERT INTO #__SuppressOutputAddTableComment
+				EXEC sp_executesql @dSQLApplyComment;
 
 
 	SET NOCOUNT OFF
@@ -295,3 +300,14 @@ END CATCH;
 
 	--Bibliography
 	--   https://stackoverflow.com/questions/20757804/execute-stored-procedure-from-stored-procedure-w-dynamic-sql-capturing-output 
+
+ --TESTING Bloc
+/* 
+
+	DECLARE @ustrFullyQualifiedTable NVARCHAR(64) = N'';
+	DECLARE @ustrComment NVARCHAR(400) = N'';
+
+	EXEC Utility.UTL.DD_AddTableComment @ustrFullyQualifiedTable
+		, @ustrComment; 
+	
+*/

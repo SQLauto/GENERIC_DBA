@@ -20,11 +20,31 @@ ALTER PROCEDURE DD_AddColumnComment
 AS
 /**Note: vrt is for Variant, which is the absurd way SQL Server stores it's Strings in the data dictionary
 * supposedly for 'security' --Dave Babler*/
-DECLARE @vrtComment SQL_VARIANT;
-DECLARE @strErrorMessage VARCHAR(MAX);
-DECLARE @boolCatchFlag BIT = 0;
+DECLARE @vrtComment SQL_VARIANT
+	, @strErrorMessage VARCHAR(MAX)
+	, @ustrDatabaseName NVARCHAR(64)
+	, @ustrSchemaName NVARCHAR(64)
+	, @ustrObjectName NVARCHAR(64)
+	, @dSQLNotExistCheck NVARCHAR(MAX)
+	, @dSQLNotExistCheckProperties NVARCHAR(MAX) -- could recycle previous var, don't want to
+	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of wether or not we add or update hence 'apply'
+	, @intRowCount INT
+	, @boolExistFlag BIT
+	, @ustrMessageOut NVARCHAR(400)
+	, @bitIsThisAView BIT
+	, @ustrViewOrTable NVARCHAR(8)
+	;
 
-SET @vrtComment = CAST(@strComment AS SQL_VARIANT);
+DECLARE @boolCatchFlag BIT = 0;  -- for catching and throwing a specific error. 
+	--set and internally cast the VARIANT, I know it's dumb, but it's what we have to do.
+SET @vrtComment = CAST(@strComment AS SQL_VARIANT);   --have to convert this to variant type as that's what the built in sp asks for.
+
+DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MAX)),'''',''''''); 
+/** Explanation of the conversion above.
+ *	1. 	I wanted to leave this conversion instead of just declaring as NVARCHAR. 
+ *		Technically it IS stored as variant, people should be aware of this.
+ *	2.	We need to deal with quotes passed in for Contractions such as "can't" which would be passed in as "can''t"
+ */
 
 BEGIN TRY
 	SET NOCOUNT ON;
@@ -50,13 +70,13 @@ BEGIN TRY
 	END
 	ELSE
 	BEGIN
-		IF NOT EXISTS (
 				/**Here we have to first check to see if a MS_Description Exists
                 * If the MS_Description does not exist will will use the ADD procedure to add the comment
                 * If the MS_Description tag does exist then we will use the UPDATE procedure to add the comment
                 * Normally it's just a simple matter of ALTER TABLE/ALTER COLUMN ADD COMMENT, literally every other system
                 * however, Microsoft Has decided to use this sort of registry style of documentation 
                 * -- Dave Babler 2020-08-26*/
+		IF NOT EXISTS (
 				SELECT NULL
 				FROM SYS.EXTENDED_PROPERTIES
 				WHERE [major_id] = OBJECT_ID(@strTableName)

@@ -3,8 +3,8 @@
 -- Create date:     08/25/2020
 -- Last Modified:   01/29/2020
 -- Description:	    Checks to see if column in table exists 
---                  use output boolean for logic flow in other procedures
--- 					This will work just fine for Views without further modifciation.
+--                  use output Boolean for logic flow in other procedures
+-- 					This will work just fine for Views without further modification.
 -- ==========================================================================================
 CREATE
 	OR
@@ -19,12 +19,18 @@ AS
 SET NOCOUNT ON;
 
 BEGIN TRY
-	/** If the table doesn't exist we're going to output a message and throw a false flag,
+	/** If the column doesn't exist we're going to output a message and throw a false flag,
      *  ELSE we'll throw a true flag so external operations can commence
      * Dave Babler 2020-08-26  */
+
+	DROP TABLE IF EXISTS #__suppressColExistDynamicOutput;
+	CREATE TABLE #__suppressColExistDynamicOutput(
+		HoldingCol NVARCHAR(MAX)
+	); -- this table is for shutting down the useless output that sometimes happens with dynamic SQL
+
 	DECLARE @ustrQuotedDB NVARCHAR(128) = N'' + QUOTENAME(@ustrDBName) + '';
 	DECLARE @intRowCount INT;
-	DECLARE @SQLCheckForTable NVARCHAR(1000) = 'SELECT 1 
+	DECLARE @SQLCheckForTable NVARCHAR(1000) = 'SELECT NULL
                                FROM ' + @ustrQuotedDB + 
 		'.INFORMATION_SCHEMA.COLUMNS 
                                WHERE TABLE_NAME = @ustrTable 
@@ -34,7 +40,7 @@ BEGIN TRY
 
 
 	
-
+	INSERT INTO #__suppressColExistDynamicOutput
 	EXECUTE sp_executesql @SQLCheckForTable
 		, N'@ustrTable NVARCHAR(64), 
             @ustrSchema NVARCHAR(64),
@@ -56,7 +62,7 @@ BEGIN TRY
 		SET @boolSuccessFlag = 1;
 		SET @ustrMessageOut = NULL;
 	END
-
+	DROP TABLE #__suppressColExistDynamicOutput;
 	SET NOCOUNT OFF;
 END TRY
 
