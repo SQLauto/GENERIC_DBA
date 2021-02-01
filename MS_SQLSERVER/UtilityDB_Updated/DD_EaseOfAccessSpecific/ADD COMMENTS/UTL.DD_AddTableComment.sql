@@ -4,6 +4,7 @@
 -- Description:		This will either add or wipe and update the comments on a table
 -- SubProcedures:	1.	Utility.UTL.prc_DBSchemaObjectAssignment
 --					2.  Utility.UTL.DD_TableExist
+--					3.	 Utility.UTL.fn_IsThisTheNameOfAView
 -- =============================================
 CREATE OR ALTER PROCEDURE UTL.DD_AddTableComment
 	-- Add the parameters for the stored procedure here
@@ -31,7 +32,13 @@ DECLARE @vrtComment SQL_VARIANT
 DECLARE @boolCatchFlag BIT = 0;  -- for catching and throwing a specific error. 
 	--set and internally cast the VARIANT, I know it's dumb, but it's what we have to do.
 SET @vrtComment = CAST(@strComment AS SQL_VARIANT);   --have to convert this to variant type as that's what the built in sp asks for.
-DECLARE @ustrVariantConv NVARCHAR(MAX) = CAST(@vrtComment AS NVARCHAR(MAX)); -- leaving this conversion instead of just declaring as nvarchar. Technically it IS stored as variant, people should be aware of this.
+
+DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MAX)),'''',''''''); 
+/** Explanation of the conversion above.
+ *	1. 	I wanted to leave this conversion instead of just declaring as NVARCHAR. 
+ *		Technically it IS stored as variant, people should be aware of this.
+ *	2.	We need to deal with quotes passed in for Contractions such as "can't" which would be passed in as "can''t"
+ */
 
 
 
@@ -43,10 +50,6 @@ BEGIN TRY
 												, @ustrSchemaName OUTPUT
 												, @ustrObjectName OUTPUT;
 
-PRINT 'BELOW SHOULD BE databaseschemaobject';
-
-PRINT  @ustrDatabaseName + @ustrSchemaName + @ustrObjectName;
-
 
 			/**Check to see if the column or table actually exists -- Babler*/
 		
@@ -55,12 +58,10 @@ PRINT  @ustrDatabaseName + @ustrSchemaName + @ustrObjectName;
 			, @ustrSchemaName
 			, @boolExistFlag OUTPUT
 			, @ustrMessageOut OUTPUT;
-			print 'bool exist flag is below';
-			print @boolExistFlag;
-	
+
 
 		/** Next Check to see if the name is for a view instead of a table, alter the function to fit your agency's naming conventions
-		 * Not necissary to check this beforehand as the previous calls will work for views and tables due to how
+		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
 		  */
 		SET @bitIsThisAView = Utility.UTL.fn_IsThisTheNameOfAView(@ustrObjectName);
@@ -75,7 +76,7 @@ PRINT  @ustrDatabaseName + @ustrSchemaName + @ustrObjectName;
 
 		SET @boolCatchFlag = 1;
 
-		PRINT @strErrorMessage;
+
 
 		RAISERROR (
 				@ustrMessageOut
@@ -111,19 +112,17 @@ ELSE
 											  + ')'
 											  +	' AND [name] = N''MS_Description''
 					AND [minor_id] = 0';
-		PRINT 'Existance check SQL below';
-		PRINT @dSQLNotExistCheckProperties;
+
 
 		EXEC sp_executesql @dSQLNotExistCheckProperties;
 
 		SET @intRowCount = @@ROWCOUNT;
-		PRINT 'Rowcount Below';
-		PRINT @intRowCount;
+
 
 		/* do an if rowcount = 0 next */
 		IF @intRowCount = 0 
 			BEGIN
-				PRINT 'IN IF STATEMENT!';
+
 				SET @dSQLApplyComment = N'EXEC ' 
 										+ @ustrDatabaseName 
 										+ '.'
@@ -146,9 +145,6 @@ ELSE
 										+ ''''
 										+	@ustrObjectName
 										+ '''';
-
-
-			PRINT CAST(@dSQLApplyComment AS VARCHAR(MAX));
 			END
 		ELSE
 			BEGIN 
@@ -177,8 +173,7 @@ ELSE
 										+ '''';
 
 			END
-				PRINT 'Apply sql comment is below';
-				PRINT @dSQLApplyComment;
+
 				EXEC sp_executesql @dSQLApplyComment
 
 
