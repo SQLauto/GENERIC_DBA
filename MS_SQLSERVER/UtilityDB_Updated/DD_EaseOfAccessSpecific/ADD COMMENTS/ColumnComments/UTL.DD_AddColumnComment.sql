@@ -134,11 +134,15 @@ BEGIN TRY
 												+ @strColumnName
 											  	+ ''''
 												+ ' AND [object_id] = OBJECT_ID( '
-												+ ''''
-												+ @ustrObjectName
+											  	+ ''''
+											  	+ @ustrDatabaseName
+											  	+ '.'
+											  	+ @ustrSchemaName
+											  	+ '.'
+											  	+ @ustrObjectName
 											  	+ ''''
 												+								' )   )';
-
+		PRINT @dSQLNotExistCheckProperties;
 			INSERT INTO #__SuppressOutputAddColumnComment
 			EXEC sp_executesql @dSQLNotExistCheckProperties;
 
@@ -176,6 +180,9 @@ BEGIN TRY
 											+  @strColumnName
 											+ ''''
 											;	
+
+
+
 				END
 			ELSE 
 				BEGIN 
@@ -210,6 +217,8 @@ BEGIN TRY
 				END
 
 	END 
+		PRINT @dSQLApplyComment
+
 		INSERT INTO #__SuppressOutputAddColumnComment
 		EXEC sp_executesql @dSQLApplyComment;
 		DROP TABLE IF EXISTS #__SuppressOutputAddColumnComment;
@@ -354,3 +363,12 @@ END CATCH
 	
 */
 EXEC Utility.sys.sp_addextendedproperty @name = N'MS_Description' , @value = 'This is a comment for column2', @level0type = N'SCHEMA' , @level0name = 'dbo', @level1type = N'TABLE', @level1name = 'TestColumns', @level2type = N'Column_2'
+
+EXEC mapbenefits.sys.sp_updateextendedproperty @name = N'MS_Description'
+	, @value = 'Amount of deferral'
+	, @level0type = N'SCHEMA'
+	, @level0name = N'STMT'
+	, @level1type = N'TABLE'
+	, @level1name = 'STATEMENT_DCP_ACCOUNT_SUMMARY_YTD'
+	, @level2type = N'COLUMN'
+	, @level2name = N'DeferralAmount'
