@@ -1,0 +1,45 @@
+    CREATE TABLE ParentUIFullSequentialID(
+        ChildID INT IDENTITY (1,1) PRIMARY KEY
+        , ChildGarbageTextFiller NVARCHAR(80)
+        , ParentUIFullSequentialID UNIQUEIDENTIFIER
+    );
+
+    ALTER TABLE ChildUniqueIdentifierVsSequentialUI
+    ADD CONSTRAINT FK_ParentUIFullSequentialID_of_ParentUIFullSequential FOREIGN KEY(ParentUIFullSequentialID)
+    REFERENCES ParentUIFullSequential(ParentUIFullSequentialID)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE;
+
+
+--- build a randomized order of the ids;
+DROP TABLE IF EXISTS #CHILDTABLEPREP;
+
+	SELECT RANK() OVER (
+			ORDER BY RAND(CHECKSUM(NEWID()))
+			) AS SortOrder
+		, ParentUIFullSequentialID
+		, SomeGarbage
+	INTO #CHILDTABLEPREP
+	FROM ParentUIFullSequential
+	ORDER BY SortOrder DESC;
+DECLARE @lcv INT = 0;
+DECLARE @strGarbageText VARCHAR(MAX) = 'Comets';
+DECLARE @strGarbageTextPrepend VARCHAR(8) = 'Comets';
+DECLARE @uqParentID UNIQUEIDENTIFIER = NULL;
+
+DECLARE CUR_SEQUENTIAL_TEST CURSOR FAST_FORWARD FOR
+    SELECT ParentUIFullSequentialID
+    FROM #CHILDTABLEPREP;
+OPEN CUR_SEQUENTIAL_TEST;
+
+FETCH NEXT FROM CUR_SEQUENTIAL_TEST INTO @uqParentID
+
+WHILE @@FETCH_STATUS = 0;
+BEGIN 
+PRINT @uqParentID;
+FETCH NEXT FROM CUR_SEQUENTIAL_TEST INTO @uqParentID
+END
+CLOSE CUR_SEQUENTIAL_TEST;
+DEALLOCATE CUR_SEQUENTIAL_TEST;
+
+
