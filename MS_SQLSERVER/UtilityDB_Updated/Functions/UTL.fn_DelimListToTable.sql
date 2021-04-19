@@ -1,22 +1,24 @@
-
+USE [Utility];
+GO
 ---this comment exists only to force it near the top of the heap in a github pull request---babler
 -- ======================================================================================
 -- Author:		Dave Babler
--- Create date:	11/09/2020
--- Description:	Splits a dot object notation string and passes it out as a table
---              This is effectively a rehash of UTL_fn_DelimListToTable.
---				However, the author felt it was important to hard code the period for saftey, and
--- 				segregated it from functions that might be used in other procs. 
---				If the CTO wishes this method can be scrapped and the other used.
+-- Create date:	09/15/2020
+-- Description:	Splits a (small) delimited list into a single column table 
+--              thus allowing the table to be used in an "IN" clause in a different
+--              query, procedure, or function. 
+-- 				This procedure is sadly, very useful in many different situations.
+--				WARNING: TABLE VARIABLES SHOULD BE ≈1000 records or less! 
+-- 				If you have more, don't use this function, make a temp table!
 -- ======================================================================================
-CREATE OR ALTER FUNCTION [UTL].[fn_DBSchemaObjCheck] (  
+CREATE OR ALTER FUNCTION [UTL].[fn_DelimListToTable] (  
 	@strDelimitedStringToParse NVARCHAR(MAX)
-	
-	)
+    , @charDelimiter CHAR(1)
+)
 RETURNS @tblParsedList TABLE (ValueID INT, StringValue NVARCHAR(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS)
 AS
+
 BEGIN      
-DECLARE @charDelimiter CHAR = '.';
 WITH RecursiveTable (
 	StartingPosition
 	, EndingPosition

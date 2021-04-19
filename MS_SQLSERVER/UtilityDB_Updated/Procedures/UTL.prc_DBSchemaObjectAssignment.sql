@@ -1,3 +1,6 @@
+USE [Utility];
+GO
+
 -- =============================================
 -- Author:			Dave Babler
 -- Create date: 	11/09/2020
@@ -5,7 +8,7 @@
 --              	and will output those to the correct calling procedure.
 --              	REMINDER: the way to call objects is and always has been as such
 --              	DBNAME.SCHEMA.OBJECT, and continues to be so.
--- Subprocedures: 	1. Utility.UTL.fn_DBSchemaObjCheck
+-- Subprocedures: 	1. Utility.DD.fn_DBSchemaObjCheck
 --
 -- =============================================
 CREATE	OR ALTER PROCEDURE UTL.prc_DBSchemaObjectAssignment
@@ -45,7 +48,7 @@ BEGIN TRY
 		-- shove the broken apart string into a temp table using TVF so we can manipulate the data.
 		INSERT INTO #tblObjectBreakdown
 		SELECT *
-		FROM Utility.UTL.fn_DBSchemaObjCheck(@strQualifiedObjectBeingCalled);
+		FROM Utility.DD.fn_DBSchemaObjCheck(@strQualifiedObjectBeingCalled);
 
 		SELECT @intNumPiecesEntered = MAX(intPosition)
 		FROM #tblObjectBreakdown;
@@ -140,15 +143,23 @@ BEGIN CATCH
 		);
 END CATCH;
 
-	/*     DECLARE @ustrDatabaseName NVARCHAR(64)
-        , @ustrSchemaName NVARCHAR(64)
-        , @ustrObjectName NVARCHAR(64);
 
-    EXEC UTL_prc_DBSchemaObjectAssignment 'VALUE.OTHERVALUE.THIRDVALUE'
-        , @ustrDatabaseName OUTPUT
-        , @ustrSchemaName OUTPUT
-        , @ustrObjectName OUTPUT;
+--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	/*   
+		DECLARE @ustrDatabaseName NVARCHAR(64)
+			, @ustrSchemaName NVARCHAR(64)
+			, @ustrObjectName NVARCHAR(64);
 
-    SELECT  @ustrDatabaseName
-    , @ustrSchemaName
-    , @ustrObjectName; */
+		EXEC DD.prc_DBSchemaObjectAssignment 'VALUE.OTHERVALUE.THIRDVALUE'
+			, @ustrDatabaseName OUTPUT
+			, @ustrSchemaName OUTPUT
+			, @ustrObjectName OUTPUT;
+
+		SELECT @ustrDatabaseName
+			, @ustrSchemaName
+			, @ustrObjectName;
+
+ */
+
+--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+

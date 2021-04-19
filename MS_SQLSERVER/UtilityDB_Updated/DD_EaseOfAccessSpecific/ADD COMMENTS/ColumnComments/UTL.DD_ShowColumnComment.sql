@@ -7,7 +7,7 @@ GO
 -- Create date: 08/26/2020
 -- Description:	This procedure makes viewing comments on a single column much more accessible.
 -- =============================================
-CREATE PROCEDURE DD_ShowColumnComment 
+CREATE PROCEDURE [DD].[ShowColumnComment] 
 	-- Add the parameters for the stored procedure here
 	@strTableName NVARCHAR(64)
 	, @strColumnName NVARCHAR(64)

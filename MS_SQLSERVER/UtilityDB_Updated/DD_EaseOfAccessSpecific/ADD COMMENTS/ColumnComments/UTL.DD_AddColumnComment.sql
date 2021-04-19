@@ -1,7 +1,4 @@
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
+USE [Utility]
 GO
 
 -- =============================================
@@ -12,7 +9,7 @@ GO
 CREATE
 	OR
 
-ALTER PROCEDURE UTL.DD_AddColumnComment
+ALTER PROCEDURE [DD].[AddColumnComment]
 	-- Add the parameters for the stored procedure here
 	@strTableName NVARCHAR(64)
 	, @strColumnName NVARCHAR(64)

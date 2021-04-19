@@ -1,3 +1,7 @@
+USE [Utility];
+GO
+
+
 -- =============================================
 -- Author:		    Dave Babler
 -- Create date:     08/25/2020
@@ -7,7 +11,7 @@
 CREATE
 	OR
 
-ALTER PROCEDURE UTL.DD_TableExist @ustrTableName NVARCHAR(64)
+ALTER PROCEDURE [DD].[prc_TableExist] @ustrTableName NVARCHAR(64)
 	, @ustrDBName NVARCHAR(64)
 	, --SHOULD BE PASSED IN FROM ANOTHER PROC
 	@ustrSchemaName NVARCHAR(64)

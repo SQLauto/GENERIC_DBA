@@ -1,13 +1,17 @@
-
--- =============================================
+USE [Utility];
+GO
+-- ==========================================================================================
 -- Author:		Dave Babler
 -- Create date: 2021-01-31
--- Description:	Checks to see based on ***common naming conventions*** if the passed string is likely the name of a view instead of a table
--- =============================================
+-- Description:	Checks to see based on ***common naming conventions*** if the passed string 
+-- 				is likely the name of a view instead of a table
+-- 				Since this not going to be a program that will be called typically outside of another proc 
+-- 				have left it's name in the traditional fn_ convention.
+-- ==========================================================================================
 CREATE
 	OR
 
-ALTER FUNCTION UTL.fn_IsThisTheNameOfAView (
+ALTER FUNCTION [DD].[fn_IsThisTheNameOfAView] (
 	-- Add the parameters for the function here
 	@ustrName NVARCHAR(64)
 	)
@@ -43,7 +47,8 @@ END
 GO
 
 
---Test Script
+--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 /*
 	 SELECT UTL.fn_IsThisTheNameOfAView('V_ofDATA'); 
 */
+--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
