@@ -55,8 +55,7 @@ DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MA
 BEGIN TRY
 	SET NOCOUNT ON;
 		--we do this type of insert to prevent seeing useless selects in the grid view on a SQL developer
-	INSERT INTO #__SuppressOutputAddColumnComment
-	EXEC Utility.UTL.prc_DBSchemaObjectAssignment @strTableName
+	EXEC Utility.DD.prc_DBSchemaObjectAssignment @strTableName
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
 												, @ustrObjectName OUTPUT;
@@ -68,8 +67,7 @@ BEGIN TRY
 	 */
 
 	 
-	INSERT INTO #__SuppressOutputAddColumnComment
-	EXEC Utility.UTL.DD_ColumnExist @ustrObjectName
+	EXEC Utility.DD.prc_ColumnExist @ustrObjectName
 		, @strColumnName
 		, @ustrDatabaseName
 		, @ustrSchemaName
@@ -81,7 +79,7 @@ BEGIN TRY
 		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
 		  */
-		SET @bitIsThisAView = Utility.UTL.fn_IsThisTheNameOfAView(@ustrObjectName);
+		SET @bitIsThisAView = Utility.DD.fn_IsThisTheNameOfAView(@ustrObjectName);
 
 		IF @bitIsThisAView = 0
 			SET @ustrViewOrTable = 'TABLE';
@@ -143,7 +141,6 @@ BEGIN TRY
 											  	+ @ustrObjectName
 											  	+ ''''
 												+								' )   )';
-		PRINT @dSQLNotExistCheckProperties;
 			INSERT INTO #__SuppressOutputAddColumnComment
 			EXEC sp_executesql @dSQLNotExistCheckProperties;
 
@@ -218,9 +215,7 @@ BEGIN TRY
 				END
 
 	END 
-		PRINT @dSQLApplyComment
 
-		INSERT INTO #__SuppressOutputAddColumnComment
 		EXEC sp_executesql @dSQLApplyComment;
 		DROP TABLE IF EXISTS #__SuppressOutputAddColumnComment;
 	SET NOCOUNT OFF
@@ -350,9 +345,9 @@ END CATCH
 
 
 
- --TESTING Bloc
-/* 
 
+--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	/* 
 	DECLARE @ustrFullyQualifiedTable NVARCHAR(64) = N'';
 	DECLARE @strColName VARCHAR(64) = '';
 	DECLARE @ustrComment NVARCHAR(400) = N'';
@@ -360,16 +355,7 @@ END CATCH
 	EXEC Utility.UTL.DD_AddColumnComment @ustrFullyQualifiedTable
 		, @strColName
 		, @ustrComment; 
-		
-	
-*/
-EXEC Utility.sys.sp_addextendedproperty @name = N'MS_Description' , @value = 'This is a comment for column2', @level0type = N'SCHEMA' , @level0name = 'dbo', @level1type = N'TABLE', @level1name = 'TestColumns', @level2type = N'Column_2'
 
-EXEC mapbenefits.sys.sp_updateextendedproperty @name = N'MS_Description'
-	, @value = 'Amount of deferral'
-	, @level0type = N'SCHEMA'
-	, @level0name = N'STMT'
-	, @level1type = N'TABLE'
-	, @level1name = 'STATEMENT_DCP_ACCOUNT_SUMMARY_YTD'
-	, @level2type = N'COLUMN'
-	, @level2name = N'DeferralAmount'
+	*/
+
+--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
