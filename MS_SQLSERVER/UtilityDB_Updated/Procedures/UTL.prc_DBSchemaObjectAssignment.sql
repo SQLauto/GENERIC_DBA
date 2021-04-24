@@ -8,10 +8,11 @@ GO
 --              	and will output those to the correct calling procedure.
 --              	REMINDER: the way to call objects is and always has been as such
 --              	DBNAME.SCHEMA.OBJECT, and continues to be so.
--- Subprocedures: 	1. Utility.DD.fn_DBSchemaObjCheck
+-- Subprocedures: 	1. [Utility].[DD].[fn_DBSchemaObjCheck]
+-- 					2 sp_executesql -- system procedure, dynamic SQL.
 --
 -- =============================================
-CREATE	OR ALTER PROCEDURE UTL.prc_DBSchemaObjectAssignment
+CREATE	OR ALTER PROCEDURE [DD].[prc_DBSchemaObjectAssignment]
 	-- Add the parameters for the stored procedure here
 	@strQualifiedObjectBeingCalled NVARCHAR(200) --64*3+UP TO 2 PERIODS TO NEXT OCTET
 	, @ustrDatabaseName NVARCHAR(64) = NULL OUTPUT
@@ -48,7 +49,7 @@ BEGIN TRY
 		-- shove the broken apart string into a temp table using TVF so we can manipulate the data.
 		INSERT INTO #tblObjectBreakdown
 		SELECT *
-		FROM Utility.DD.fn_DBSchemaObjCheck(@strQualifiedObjectBeingCalled);
+		FROM [Utility].[DD].[fn_DBSchemaObjCheck](@strQualifiedObjectBeingCalled);
 
 		SELECT @intNumPiecesEntered = MAX(intPosition)
 		FROM #tblObjectBreakdown;

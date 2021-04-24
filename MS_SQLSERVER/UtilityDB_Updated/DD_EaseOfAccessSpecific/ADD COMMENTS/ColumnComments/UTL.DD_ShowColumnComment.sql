@@ -2,11 +2,13 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =============================================
--- Author:		Dave Babler
--- Create date: 08/26/2020
--- Description:	This procedure makes viewing comments on a single column much more accessible.
--- =============================================
+-- ==========================================================================================
+-- Author:			Dave Babler
+-- Create date: 	2020-08-25
+-- Last Edited By:	Dave Babler
+-- Last Updated:	2021-04-24
+-- Description:	    This procedure makes viewing comments on a single column much more accessible.
+-- ==========================================================================================
 CREATE PROCEDURE [DD].[ShowColumnComment] 
 	-- Add the parameters for the stored procedure here
 	@strTableName NVARCHAR(64)

@@ -1,12 +1,16 @@
--- =============================================
--- Author:			DaveBabler
--- Create date: 	04/25/2020
+USE [Utility];
+GO
+-- ==========================================================================================
+-- Author:			Dave Babler
+-- Create date: 	2020-08-25
+-- Last Edited By:	Dave Babler
+-- Last Updated:	2021-04-24
 -- Description:		This will either add or wipe and update the comments on a table
--- SubProcedures:	1.	Utility.UTL.prc_DBSchemaObjectAssignment
---					2.  Utility.UTL.DD_TableExist
---					3.	 Utility.UTL.fn_IsThisTheNameOfAView
--- =============================================
-CREATE OR ALTER PROCEDURE UTL.DD_AddTableComment
+-- SubProcedures:	1.	[Utility].[DD].[prc_DBSchemaObjectAssignment]
+--					2.  [Utility].[DD].[prc_TableExist]
+--					3.	 [Utility].[DD].[fn_IsThisTheNameOfAView]
+-- ==========================================================================================
+CREATE OR ALTER PROCEDURE DD.AddTableComment
 	-- Add the parameters for the stored procedure here
 	@strTableName NVARCHAR(64)
 	, @strComment NVARCHAR(360)
@@ -49,7 +53,7 @@ BEGIN TRY
 	SET NOCOUNT ON;
 	--break apart the fully qualified object name
 	INSERT INTO #__SuppressOutputAddTableComment
-	EXEC Utility.UTL.prc_DBSchemaObjectAssignment @strTableName
+	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @strTableName
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
 												, @ustrObjectName OUTPUT;
@@ -57,7 +61,7 @@ BEGIN TRY
 
 			/**Check to see if the column or table actually exists -- Babler*/
 	INSERT INTO #__SuppressOutputAddTableComment
-	EXEC Utility.UTL.DD_TableExist @ustrObjectName
+	EXEC [Utility].[DD].[prc_TableExist] @ustrObjectName
 		, @ustrDatabaseName
 		, @ustrSchemaName
 		, @boolExistFlag OUTPUT
@@ -69,7 +73,7 @@ BEGIN TRY
 		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
 		  */
-		SET @bitIsThisAView = Utility.UTL.fn_IsThisTheNameOfAView(@ustrObjectName);
+		SET @bitIsThisAView = [Utility].[DD].[fn_IsThisTheNameOfAView](@ustrObjectName);
 
 		IF @bitIsThisAView = 0
 			SET @ustrViewOrTable = 'TABLE';
@@ -205,7 +209,7 @@ BEGIN CATCH
 		, ERROR_SEVERITY()
 		, ERROR_LINE()
 		, ERROR_PROCEDURE()
-		, ERROR_MESSAGE()
+		, CONCAT( N'Boolean flag thrown!', CAST(ERROR_MESSAGE() AS NVARCHAR(2000)))
 		, GETDATE()
 		);
 	END
@@ -298,13 +302,16 @@ END CATCH;
 	--Bibliography
 	--   https://stackoverflow.com/questions/20757804/execute-stored-procedure-from-stored-procedure-w-dynamic-sql-capturing-output 
 
- --TESTING Bloc
-/* 
-
+--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	/* 
 	DECLARE @ustrFullyQualifiedTable NVARCHAR(64) = N'';
 	DECLARE @ustrComment NVARCHAR(400) = N'';
 
-	EXEC Utility.UTL.DD_AddTableComment @ustrFullyQualifiedTable
+	EXEC Utility.DD.AddTableComment @ustrFullyQualifiedTable
 		, @ustrComment; 
 	
 */
+
+--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+

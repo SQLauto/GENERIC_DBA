@@ -1,11 +1,15 @@
 USE [Utility]
 GO
 
--- =============================================
--- Author:		Dave Babler
--- Create date: 08/26/2020
--- Description:	This makes adding comments to columns in SQLServer far more accessible than before.
--- =============================================
+-- ==========================================================================================
+-- Author:			Dave Babler
+-- Create date: 	2020-08-26
+-- Last Updated:	2021-04-24
+-- Description:		This makes adding comments to columns in SQLServer far more accessible than before.
+--					Special Security Note:
+-- 					The code AND [object_id] = OBJECT_ID() should prevent most injection. 
+-- 					If it doesn't change to a proper ID the proc will fail.
+-- ==========================================================================================
 CREATE
 	OR
 
