@@ -25,14 +25,23 @@ ALTER PROCEDURE DD.ShowTableComment @strTableName NVARCHAR(64)
 	 * The optional message out will be used when passing from proc to proc to make things more proceduralized.
 	 * --Dave Babler 08/26/2020  */
 AS
-DECLARE @strMessageOut NVARCHAR(320)
+DECLARE @ustrMessageOut NVARCHAR(320)
+	, @intRowCount INT
 	, @bitSuppressVisualOutput BIT
 	, @bitIsThisAView BIT
+	, @bitExistFlag BIT
 	, @ustrDatabaseName NVARCHAR(64)
 	, @ustrSchemaName NVARCHAR(64)
 	, @ustrObjectName NVARCHAR(64)
-	, @sqlCheckForComment NVARCHAR(8000)
-	, @sqlPullComment NVARCHAR(8000);
+	, @ustrViewOrTable NVARCHAR(8)
+	, @dSQLCheckForComment NVARCHAR(MAX)
+	, @dSQLPullComment NVARCHAR(MAX)
+	, @dSQLPullCommentParameters NVARCHAR(MAX)
+	, @dSQLInternalVariantOutput SQL_VARIANT;
+
+CREATE TABLE #__SuppressOutputShowTableComment(
+	SuppressedOutput VARCHAR(MAX)
+)
 
 BEGIN TRY
 	/**First with procedures that are stand alone/embedded hybrids, determine if we need to suppress output by 
@@ -46,7 +55,7 @@ BEGIN TRY
 		, @ustrSchemaName OUTPUT
 		, @ustrObjectName OUTPUT;
 
-		
+
 		/** Next Check to see if the name is for a view instead of a table, alter the function to fit your agency's naming conventions
 		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
@@ -58,76 +67,110 @@ BEGIN TRY
 		ELSE
 			SET @ustrViewOrTable = 'VIEW';
 
-
-	IF EXISTS (
-			/**Check to see if the table exists, if it does not we will output an Error Message
-        * however since we are not writing anything to the DD we won't go through the whole RAISEEROR 
-        * or THROW and CATCH process, a simple output is sufficient. -- Babler
-        */
-			SELECT 1
-			FROM INFORMATION_SCHEMA.TABLES
-			WHERE TABLE_NAME = @ustrObjectName
-				AND TABLE_SCHEMA = @ustrSchemaName
-				AND TABLE_CATALOG = @ustrDataBaseName
-			)
+	EXEC [Utility].[DD].[prc_TableExist] @ustrObjectName
+		, @ustrDatabaseName
+		, @ustrSchemaName
+		, @bitExistFlag OUTPUT
+		, @ustrMessageOut OUTPUT;
+		PRINT @ustrMessageOut;
+	IF @bitExistFlag = 1
 	BEGIN
-		IF EXISTS (
+		print 'in'
 				/**Check to see if the table has the extened properties on it.
                         *If it does not  will ultimately ask someone to please create 
                         * the comment on the table -- Babler */
-				SELECT NULL
-				FROM SYS.EXTENDED_PROPERTIES
-				WHERE [major_id] = OBJECT_ID(CONCAT (
-							@ustrDataBaseName
-							, '.'
-							, @ustrSchemaName
-							, '.'
-							, @ustrObjectName
-							))
-					AND [name] = N'MS_Description'
-					AND [minor_id] = 0
-				)
+		SET @dSQLCheckForComment = N' SELECT 1
+									FROM '
+									+ QUOTENAME(@ustrDataBaseName)
+									+ '.sys.extended_properties'
+									+ ' WHERE [major_id] = OBJECT_ID('
+									+ ''''
+									+ @ustrDatabaseName
+									+ '.'
+									+ @ustrSchemaName
+									+ '.'
+									+ @ustrObjectName
+									+''''
+									+')'
+									+ ' AND [name] = N''MS_Description''
+										AND [minor_id] = 0';
+										PRINT '======================='
+					INSERT INTO #__SuppressOutputShowTableComment
+					EXEC sp_executesql @dSQLCheckForComment;
+					SET @intRowCount = @@ROWCOUNT;
+		IF @intRowCount != 0
 		BEGIN
-			WITH tp (
-				epTableName
-				, epExtendedProperty
-				)
-			AS (
-				SELECT OBJECT_NAME(ep.major_id) AS [epTableName]
-					, ep.Value AS [epExtendedProperty]
-				FROM sys.extended_properties ep
-				WHERE ep.name = N'MS_Description' --sql server							 absurdly complex version of COMMENT
-					AND ep.minor_id = 0 --prevents showing column comments
-				)
-			SELECT TOP 1 @strMessageOut = CAST(tp.epExtendedProperty AS NVARCHAR(320))
-			FROM INFORMATION_SCHEMA.TABLES AS t
-			INNER JOIN tp
-				ON t.TABLE_NAME = tp.epTableName
-			WHERE TABLE_TYPE = N'BASE TABLE'
-				AND tp.epTableName = @ustrObjectName;
+				SET @dSQLPullComment = N'
+								
+								SELECT   @ustrMessageOutTemp  = epExtendedProperty
+								FROM ' + QUOTENAME(
+						@ustrDataBaseName) + 
+					'.INFORMATION_SCHEMA.TABLES AS t
+								INNER JOIN (
+									
+									SELECT OBJECT_NAME(ep.major_id, DB_ID(' + '''' + 
+					@ustrDataBaseName + '''' + 
+					')) AS [epTableName]
+										, CAST(ep.Value AS NVARCHAR(320)) AS [epExtendedProperty]
+									FROM ' + QUOTENAME(
+						@ustrDataBaseName) + 
+					'.sys.extended_properties ep
+									WHERE ep.name = N''MS_Description'' 
+										AND ep.minor_id = 0 
+									
+								) AS tp
+									ON t.TABLE_NAME = tp.epTableName
+								WHERE TABLE_TYPE = ''BASE TABLE''
+								AND tp.epTableName = @ustrObjectName
+									AND t.TABLE_CATALOG = @ustrDatabaseName
+									AND t.TABLE_SCHEMA = @ustrSchemaName'
+					;
+
+
+PRINT @dSQLPullComment
+
+			SET @dSQLPullCommentParameters = 
+				N' @ustrDatabaseName NVARCHAR(64)
+				, @ustrSchemaName NVARCHAR(64)
+				, @ustrObjectName NVARCHAR(64)
+				, @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
+				;
+				EXECUTE sp_executesql @dSQLPullComment
+					, N' @ustrDatabaseName NVARCHAR(64)
+				, @ustrSchemaName NVARCHAR(64)
+				, @ustrObjectName NVARCHAR(64)
+				, @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
+					, @ustrDatabaseName = @ustrDatabaseName
+					, @ustrSchemaName = @ustrSchemaName
+					, @ustrObjectName = @ustrObjectName
+					, @ustrMessageOutTemp = @ustrMessageOut OUTPUT;
+
+
+			PRINT @ustrMessageOut
+
 
 			SET @boolOptionalSuccessFlag = 1;--Let any calling procedures know that there is in fact
-			SET @strOptionalMessageOut = @strMessageOut;
+			SET @strOptionalMessageOut = @ustrMessageOut;
 		END
 		ELSE
 		BEGIN
 			SET @boolOptionalSuccessFlag = 0;--let any proc calling know that there is no table comments yet.
-			SET @strMessageOut = @ustrDataBaseName + '.' + @ustrSchemaName + '.' @ustrObjectName + 
+			SET @ustrMessageOut = @ustrDataBaseName + '.' + @ustrSchemaName + '.'+  @ustrObjectName + 
 				N' currently has no comments please use DD_AddTableComment to add comments!';
-			SET @strOptionalMessageOut = @strMessageOut;
+			SET @strOptionalMessageOut = @ustrMessageOut;
 		END
 
 		IF @bitSuppressVisualOutput = 0
 		BEGIN
 			SELECT @ustrObjectName AS 'Table Name'
-				, @strMessageOut AS 'TableComment';
+				, @ustrMessageOut AS 'TableComment';
 		END
 	END
 	ELSE
 	BEGIN
-		SET @strMessageOut = ' The table you typed in: ' + @ustrObjectName + ' ' + 'is invalid, check spelling, try again? ';
+		SET @ustrMessageOut = ' The table you typed in: ' + @ustrObjectName + ' ' + 'is invalid, check spelling, try again? ';
 
-		SELECT @strMessageOut AS 'NON_LOGGED_ERROR_MESSAGE'
+		SELECT @ustrMessageOut AS 'NON_LOGGED_ERROR_MESSAGE'
 	END
 END TRY
 
@@ -199,3 +242,26 @@ PRINT
 
 */
 	--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+--~~~~~~~~~~~~~~~~~~~~~~~~~DYNAMIC SQL~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/* 
+;WITH tp (
+	epTableName
+	, epExtendedProperty
+	)
+AS (
+	SELECT OBJECT_NAME(ep.major_id) AS [epTableName]
+		, ep.Value AS [epExtendedProperty]
+	FROM @ustDatabaseName.sys.extended_properties ep
+	WHERE ep.name = N'MS_Description' --sql serverabsurdly complex version of COMMENT
+		AND ep.minor_id = 0 --prevents showing column comments
+	)
+SELECT TOP 1 @ustrMessageOut = CAST(tp.epExtendedProperty AS NVARCHAR(320))
+FROM INFORMATION_SCHEMA.TABLES AS t
+INNER JOIN tp
+	ON t.TABLE_NAME = tp.epTableName
+WHERE TABLE_TYPE = N'BASE TABLE'
+	AND tp.epTableName = @ustrObjectName
+	AND t.TABLE_CATALOG = @ustrDatabaseName
+	AND t.TABLE_SCHEMA = @ustrSchemaName;
+	 */
+--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

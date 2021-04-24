@@ -45,6 +45,7 @@ DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MA
  *	2.	We need to deal with quotes passed in for Contractions such as "can't" which would be passed in as "can''t"
  */
 
+DROP TABLE IF EXISTS #__SuppressOutputAddTableComment;
 CREATE TABLE #__SuppressOutputAddTableComment (
 	SuppressedOutput VARCHAR(MAX)
 );
@@ -117,7 +118,7 @@ ELSE
 											  + ''''
 											  + ')'
 											  +	' AND [name] = N''MS_Description''
-					AND [minor_id] = 0';
+													AND [minor_id] = 0';
 
 		INSERT INTO #__SuppressOutputAddTableComment
 		EXEC sp_executesql @dSQLNotExistCheckProperties;
