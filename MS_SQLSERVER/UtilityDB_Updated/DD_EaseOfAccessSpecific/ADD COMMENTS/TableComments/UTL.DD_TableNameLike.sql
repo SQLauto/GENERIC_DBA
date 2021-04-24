@@ -7,15 +7,15 @@ GO
 -- Author:		Dave Babler
 -- Create date: 08/31/2020
 -- Description:	This returns a list of tables and comments based on a guessed name
--- Subprocedures: 1. UTL.prc_DBSchemaObjectAssignment
+-- Subprocedures: 1. DD.prc_DBSchemaObjectAssignment
 
 -- =============================================
-CREATE PROCEDURE DD_TableNameLike 
+CREATE OR ALTER PROCEDURE DD.TableNameLike 
 	-- Add the parameters for the stored procedure here
 	@strTableGuess NVARCHAR(194) --64*3+2periods 
 
 AS
-BEGIN
+BEGIN TRY 
     SET NOCOUNT ON;
 
 
@@ -33,7 +33,7 @@ DECLARE @strTableNameLowerFuzzy NVARCHAR(80)
 	, @ustrObjectName NVARCHAR(64);
 
 
-EXEC UTL.prc_DBSchemaObjectAssignment @strTableGuess, @ustrDatabaseName OUTPUT, @ustrSchemaName OUTPUT, @ustrObjectName OUTPUT;
+EXEC DD.prc_DBSchemaObjectAssignment @strTableGuess, @ustrDatabaseName OUTPUT, @ustrSchemaName OUTPUT, @ustrObjectName OUTPUT;
 
 
 
@@ -55,10 +55,10 @@ DECLARE @SQLStatementFindTables AS NVARCHAR(1000);
 
 SET @SQLStatementFindTables = 'SELECT 	sysObj.name AS "TableName"
 	                            , ep.value AS "TableDescription" 
-                                FROM sysobjects sysObj
-                                INNER JOIN sys.tables sysTbl
+                                FROM '+ QUOTENAME(@ustrDatabaseName) +'.sys.sysobjects sysObj
+                                INNER JOIN ' + QUOTENAME(@ustrDatabaseName)  +'.sys.tables sysTbl
                                     ON sysTbl.object_id = sysObj.id
-                                LEFT JOIN sys.extended_properties ep
+                                LEFT JOIN '+  QUOTENAME(@ustrDatabaseName)  +'.sys.extended_properties ep
                                     ON ep.major_id = sysObj.id
                                         AND ep.name = ''MS_Description''
                                         AND ep.minor_id = 0
@@ -70,6 +70,64 @@ EXECUTE sp_executesql @SQLStatementFindTables, N'@strTbl NVARCHAR(80)', @strTbl 
 SET NOCOUNT OFF;
 
 
+
+
+
+END TRY
+BEGIN CATCH
+
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
+	VALUES (
+		DB_NAME()
+		, SUSER_SNAME()
+		, ERROR_NUMBER()
+		, ERROR_STATE()
+		, ERROR_SEVERITY()
+		, ERROR_LINE()
+		, ERROR_PROCEDURE()
+		, ERROR_MESSAGE()
+		, GETDATE()
+		);
+
+	PRINT 
+		'Please check the DB_EXCEPTION_TANK an error has been raised. 
+		The query between the lines below will likely get you what you need.
+
+		_____________________________
+
+
+		WITH mxe
+		AS (
+			SELECT MAX(ErrorID) AS MaxError
+			FROM CustomLog.ERR.DB_EXCEPTION_TANK
+			)
+		SELECT ErrorID
+			, DatabaseName
+			, UserName
+			, ErrorNumber
+			, ErrorState
+			, ErrorLine
+			, ErrorProcedure
+			, ErrorMessage
+			, ErrorDateTime
+		FROM CustomLog.ERR.DB_EXCEPTION_TANK et
+		INNER JOIN mxe
+			ON et.ErrorID = mxe.MaxError
+
+		_____________________________
+
+'
+END CATCH;
 
 --@SQLStatementFindTables working example is below.
 -- SELECT --t.id                        as  "object_id",
@@ -84,4 +142,17 @@ SET NOCOUNT OFF;
 -- 		AND ep.minor_id = 0
 -- WHERE lower(sysObj.name) LIKE '%tank%'
 
-END
+
+
+--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	/* 
+    DECLARE @return_value INT
+
+    EXEC @return_value = [DD].[TableNameLike] @strTableGuess = N'Galactic.dbo.transmon'
+
+    SELECT 'Return Value' = @return_value`
+
+
+	*/
+
+--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
