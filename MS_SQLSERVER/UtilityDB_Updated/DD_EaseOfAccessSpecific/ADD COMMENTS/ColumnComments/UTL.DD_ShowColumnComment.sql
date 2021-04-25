@@ -112,14 +112,29 @@ EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
                 +'.sys.columns AS c	
                     ON ep.major_id = c.object_id
                         AND ep.minor_id = c.column_id
-                WHERE st.name = @strTableName
+                WHERE st.name = @ustrObjectName
                     AND c.name = @ustrColumnName';
-            SET
+                SET @dSQLPullCommentParameters = 
+                    N' @ustrColumnName NVARCHAR(64)
+                                , @ustrObjectName NVARCHAR(64)
+                                , @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
+                    ;
+
+                EXECUTE sp_executesql @dSQLPullComment
+                , N'@ustrColumnName NVARCHAR(64)
+                            , @ustrObjectName NVARCHAR(64)
+                            , @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
+                , @ustrColumnName = @ustrColumnName
+                , @ustrObjectName = @ustrObjectName
+                , @ustrMessageOutTemp = @ustrMessageOut OUTPUT;
+
+
+                    PRINT @ustrMessageOut
             END
             ELSE
             BEGIN
                 SET @ustrMessageOut = @strTableName + ' ' + @ustrColumnName + 
-                    N' currently has no comments please use DD_AddColumnComment to add a comment!';
+                    N' currently has no comments please use Utility.DD.AddColumnComment to add a comment!';
             END
 
             SELECT @ustrColumnName AS 'ColumnName'
@@ -188,10 +203,26 @@ PRINT
 		_____________________________
 ';
 END CATCH
-               
+	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	/* 
+
+            DECLARE	@return_value int
+
+            EXEC	@return_value = Utility.[DD].[ShowColumnComment]
+                    @strTableName = N'Galactic.dbo.WorkDone',
+                    @ustrColumnName = N'Description'
+
+            SELECT	'Return Value' = @return_value
+
+            GO
+
+*/
+	--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
 
 --~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~DYNAMIC SQL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+/* 
 SELECT NULL
 FROM SYS.EXTENDED_PROPERTIES
 WHERE [major_id] = OBJECT_ID(@strTableName)
@@ -214,5 +245,8 @@ INNER JOIN [DatabaseName].sys.columns AS c
 		AND ep.minor_id = c.column_id
 WHERE st.name = @strTableName
 	AND c.name = @ustrColumnName
+   
+  */
 
---~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                    
+--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                 
+

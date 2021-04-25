@@ -157,7 +157,7 @@ PRINT @dSQLPullComment
 		BEGIN
 			SET @boolOptionalSuccessFlag = 0;--let any proc calling know that there is no table comments yet.
 			SET @ustrMessageOut = @ustrDataBaseName + '.' + @ustrSchemaName + '.'+  @ustrObjectName + 
-				N' currently has no comments please use DD_AddTableComment to add comments!';
+				N' currently has no comments please use Utility.DD.AddTableComment to add comments!';
 			SET @strOptionalMessageOut = @ustrMessageOut;
 		END
 
