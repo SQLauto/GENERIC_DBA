@@ -13,7 +13,8 @@ GO
 -- Description:		Checks to see if table comments exist
 -- Subprocedures: 	1. [Utility].[UTL].[fn_SuppressOutput]
 -- 					2. [Utility].[DD].[prc_DBSchemaObjectAssignment]
--- 					3. 
+-- 					3. [Utility].[DD].[prc_TableExist]
+--  				4. [Utility].[DD].[fn_IsThisTheNameOfAView]
 -- ==========================================================================================
 CREATE
 	OR
@@ -75,7 +76,7 @@ BEGIN TRY
 		PRINT @ustrMessageOut;
 	IF @bitExistFlag = 1
 	BEGIN
-		print 'in'
+
 				/**Check to see if the table has the extened properties on it.
                         *If it does not  will ultimately ask someone to please create 
                         * the comment on the table -- Babler */
@@ -94,7 +95,7 @@ BEGIN TRY
 									+')'
 									+ ' AND [name] = N''MS_Description''
 										AND [minor_id] = 0';
-										PRINT '======================='
+										
 					INSERT INTO #__SuppressOutputShowTableComment
 					EXEC sp_executesql @dSQLCheckForComment;
 					SET @intRowCount = @@ROWCOUNT;

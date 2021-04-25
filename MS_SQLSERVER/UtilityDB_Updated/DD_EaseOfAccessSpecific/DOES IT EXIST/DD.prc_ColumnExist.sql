@@ -109,7 +109,7 @@ DECLARE @ustrSchemaName NVARCHAR(64) = '';
 DECLARE @boolSuccessFlag BIT;
 DECLARE @ustrMessageOut NVARCHAR(400);
 
-EXEC Utility.UTL.DD_ColumnExist @ustrTableName
+EXEC Utility.[DD].[ColumnExist] @ustrTableName
 	, @ustrColumnName
 	, @ustrDBName
 	, @ustrSchemaName
