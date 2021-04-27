@@ -12,7 +12,7 @@ GO
 -- ==========================================================================================
 CREATE OR ALTER PROCEDURE DD.AddTableComment
 	-- Add the parameters for the stored procedure here
-	@strTableName NVARCHAR(64)
+	@strTableName NVARCHAR(200)
 	, @strComment NVARCHAR(360)
 AS
 /**Note: vrt is for Variant, which is the absurd way SQL Server stores it's Strings in the data dictionary
@@ -62,11 +62,7 @@ BEGIN TRY
 
 			/**Check to see if the column or table actually exists -- Babler*/
 	INSERT INTO #__SuppressOutputAddTableComment
-	EXEC [Utility].[DD].[prc_TableExist] @ustrObjectName
-		, @ustrDatabaseName
-		, @ustrSchemaName
-		, @boolExistFlag OUTPUT
-		, @ustrMessageOut OUTPUT;
+
 
 
 

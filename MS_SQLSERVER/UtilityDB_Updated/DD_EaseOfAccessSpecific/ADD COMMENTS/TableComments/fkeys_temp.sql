@@ -1,84 +1,15 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- =============================================
--- Author:		Dave Babler
--- Create date: 08/26/2020
--- Description:	This recreates and improves upon Oracle's ANSI DESCRIBE table built in data dictionary proc
--- 				This will default to the dbo schema unless specified within the input parameter.
--- Subprocedures: 1. DD.ShowTableComment
--- 				  2. UTL_fn_DelimListToTable  (already exists, used to have diff name)
--- =============================================
-CREATE OR ALTER PROCEDURE DD.Describe
-	-- Add the parameters for the stored procedure here
-	@str_input_TableName VARCHAR(128) 
-	 
-AS
+DROP TABLE IF EXISTS #DESCRIBE 
 
-
-DECLARE @strMessageOut NVARCHAR(320)
-	, @boolIsTableCommentSet BIT = NULL
-	, @strTableComment NVARCHAR(320)
-	, @strTableSubComment NVARCHAR(80) --This will be an additional flag warning there is no actual table comment!
-	, @bitIsThisAView BIT
-	, @bitExistFlag BIT
+DECLARE @dSQLTest NVARCHAR(MAX)
+	, @dSQLTestParams NVARCHAR(MAX)
 	, @ustrDatabaseName NVARCHAR(64)
 	, @ustrSchemaName NVARCHAR(64)
 	, @ustrObjectName NVARCHAR(64)
-	, @ustrViewOrTable NVARCHAR(8)
-	, @dSQLBuildDescribe NVARCHAR(MAX)
-	, @dSQLParamaters NVARCHAR(MAX);
 
-BEGIN TRY
-		DROP TABLE IF EXISTS ##DESCRIBE;  --for future output to temp tables ignore for now
-	/** First check to see if a schema was specified in the input paramater, schema.table, else default to dbo. -- Babler*/
-
-	IF CHARINDEX(@charDelimiter, @str_input_TableName) > 0
-	BEGIN 
-		SELECT @strSchemaName = StringValue
-		FROM UTL_fn_DelimListToTable(@str_input_TableName, '.')
-		WHERE ValueID = @intSchmeaKey;
-
-		SELECT @strTableName = StringValue
-		FROM UTL_fn_DelimListToTable(@str_input_TableName, '.')
-		WHERE ValueID = @intTableKey;
-	END
-	ELSE 
-	BEGIN 
-		/**If no delimiting set default schema of dbo, and table name to what's passed in -- Dave Babler*/
-		SET @strSchemaName = 'dbo';
-		SET @strTableName = @str_input_TableName;
-	END
-	PRINT 'Schema: ' + @strSchemaName + ' ' +'Table: ' +@strTableName;
-
-	IF EXISTS (
-			/**Check to see if the table exists, if it does not we will output an Error Message
-        * however since we are not writing anything to the DD we won't go through the whole RAISEEROR 
-        * or THROW and CATCH process, a simple output is sufficient. -- Babler
-        */
-			SELECT 1
-			FROM INFORMATION_SCHEMA.TABLES
-			WHERE TABLE_NAME = @strTableName
-			AND TABLE_CATALOG = @str
-			)
-	BEGIN
-		-- we want to suppress results (perhaps this could be proceduralized as well one to make the table one to kill?)
-		CREATE TABLE #__suppress_results (col1 INT);
-
-		EXEC DD.ShowTableComment @strTableName
-			, @boolIsTableCommentSet OUTPUT
-			, @strTableComment OUTPUT;
-
-		IF @boolIsTableCommentSet = 0
-		BEGIN
-			SET @strTableSubComment = 'RECTIFY MISSING TABLE COMMENT -->';
-		END
-		ELSE
-		BEGIN
-			SET @strTableSubComment = 'TABLE COMMENT --> ';
-		END
-		SET @dSQLBuildDescribe  = 
+SET @ustrDatabaseName = 'AdventureWorks2016';
+SET @ustrSchemaName = 'Sales';
+SET @ustrObjectName = 'BusinessEntityContact';
+SET @dSQLTest = 
                     N'WITH fkeys
                     AS (
                         SELECT col.name AS NameofFKColumn
@@ -206,90 +137,17 @@ BEGIN TRY
                     WHERE col.TABLE_NAME = @ustrTableName_d
                         AND col.TABLE_SCHEMA = @ustrSchemaName_d
 
-                        	UNION ALL
-		
-		SELECT TOP 1 @ustrTableName_d
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, NULL
-			, @strTableSubComment_d
-			, @strTableComment_d
-			, NULL --list of indexes 
-		ORDER BY 2 
-
 '
 	;
 
-
-
-
     SELECT CAST('<root><![CDATA[' + @dSQLTestParams + ']]></root>' AS XML)
 
-
-	SET @dSQLParamaters = '@ustrDatabaseName_d NVARCHAR(64)
+SET @dSQLTestParams = '@ustrDatabaseName_d NVARCHAR(64)
 , @ustrSchemaName_d NVARCHAR(64)
-, @ustrTableName_d NVARCHAR(64)
-, @strTableSubComment_d VARCHAR(2000)
-, @strTableComment_d VARCHAR(2000)';
+, @ustrTableName_d NVARCHAR(64)';
 
-
-EXEC sp_executesql @dSQLBuildDescribe
+EXEC sp_executesql @dSQLTest
 , @dSQLTestParams
 , @ustrDatabaseName_d = @ustrDatabaseName
 , @ustrSchemaName_d = @ustrSchemaName
-, @ustrTableName_d = @ustrObjectName
-, @strTableSubComment_d = @strTableSubComment
-, @strTableComment_d = @strTableComment;
-
-
-		/**Why this trashy garbage Dave? 
-		* 1. I didn't have time to come up with a fake pass through TVF, nor would I want
-		* 		what should just be a simple command and execute to have to go through the garbage
-		* 		of having to SELECT out of a TVF.
-		* 2. If we want to be able to select from our now 'much better than' ANSI DESCRIBE 
-		*	 then we have to output the table like this. 
-		* 3. Be advised if multiple people run this at the same time the global temp table will change!
-		* 4.  Future iterations could allow someone to choose their own global temp table name, but again, 
-		*	 I WANT SIMPLICITY ON THE CALL, even if the code itself is quite complex!
-		* -- Dave Babler 2020-09-28
-		*/
-
-
- 
-		SELECT *
-		FROM ##DESCRIBE; --WE HAVE TO OUTPUT IT. 
-	END
-
-
-	ELSE
-	BEGIN
-		SET @strMessageOut = ' The table you typed in: ' + @strTableName + ' ' + 'is invalid, check spelling, try again? ';
-
-		SELECT @strMessageOut AS 'NON_LOGGED_ERROR_MESSAGE'
-	END
-
-		DROP TABLE
-		IF EXISTS #__suppress_results;
-	END TRY
-	BEGIN CATCH
-		INSERT INTO dbo.DB_EXCEPTION_TANK
-		VALUES (
-			SUSER_SNAME()
-			, ERROR_NUMBER()
-			, ERROR_STATE()
-			, ERROR_SEVERITY()
-			, ERROR_PROCEDURE()
-			, ERROR_LINE()
-			, ERROR_MESSAGE()
-			, GETDATE()
-			);
-	END CATCH;
+, @ustrTableName_d = @ustrObjectName;
