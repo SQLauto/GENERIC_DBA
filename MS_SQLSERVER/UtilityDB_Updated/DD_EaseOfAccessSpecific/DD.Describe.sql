@@ -1,3 +1,6 @@
+USE [Utility]
+GO
+/****** Object:  StoredProcedure [DD].[Describe]    Script Date: 4/28/2021 10:44:16 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -10,9 +13,9 @@ GO
 -- Subprocedures: 1. DD.ShowTableComment
 -- 				  2. UTL_fn_DelimListToTable  (already exists, used to have diff name)
 -- =============================================
-CREATE OR ALTER PROCEDURE DD.Describe
+ALTER   PROCEDURE [DD].[Describe]
 	-- Add the parameters for the stored procedure here
-	@str_input_TableName VARCHAR(128) 
+	@str_input_TableName VARCHAR(200) 
 	 
 AS
 
@@ -25,48 +28,44 @@ DECLARE @strMessageOut NVARCHAR(320)
 	, @bitExistFlag BIT
 	, @ustrDatabaseName NVARCHAR(64)
 	, @ustrSchemaName NVARCHAR(64)
-	, @ustrObjectName NVARCHAR(64)
+	, @ustrTableorObjName NVARCHAR(64)
 	, @ustrViewOrTable NVARCHAR(8)
 	, @dSQLBuildDescribe NVARCHAR(MAX)
-	, @dSQLParamaters NVARCHAR(MAX);
+	, @dSQLParamaters NVARCHAR(MAX)
+    , @bitSuccessFlag BIT;
 
 BEGIN TRY
+SET NOCOUNT ON;
 		DROP TABLE IF EXISTS ##DESCRIBE;  --for future output to temp tables ignore for now
 	/** First check to see if a schema was specified in the input paramater, schema.table, else default to dbo. -- Babler*/
+		EXEC Utility.DD.prc_DBSchemaObjectAssignment @str_input_TableName
+			, @ustrDatabaseName OUTPUT
+			, @ustrSchemaName OUTPUT
+			, @ustrTableorObjName OUTPUT;
 
-	IF CHARINDEX(@charDelimiter, @str_input_TableName) > 0
-	BEGIN 
-		SELECT @strSchemaName = StringValue
-		FROM UTL_fn_DelimListToTable(@str_input_TableName, '.')
-		WHERE ValueID = @intSchmeaKey;
 
-		SELECT @strTableName = StringValue
-		FROM UTL_fn_DelimListToTable(@str_input_TableName, '.')
-		WHERE ValueID = @intTableKey;
-	END
-	ELSE 
-	BEGIN 
-		/**If no delimiting set default schema of dbo, and table name to what's passed in -- Dave Babler*/
-		SET @strSchemaName = 'dbo';
-		SET @strTableName = @str_input_TableName;
-	END
-	PRINT 'Schema: ' + @strSchemaName + ' ' +'Table: ' +@strTableName;
 
-	IF EXISTS (
 			/**Check to see if the table exists, if it does not we will output an Error Message
         * however since we are not writing anything to the DD we won't go through the whole RAISEEROR 
         * or THROW and CATCH process, a simple output is sufficient. -- Babler
         */
-			SELECT 1
-			FROM INFORMATION_SCHEMA.TABLES
-			WHERE TABLE_NAME = @strTableName
-			AND TABLE_CATALOG = @str
-			)
+
+
+
+    EXEC Utility.DD.prc_TableExist @ustrTableorObjName
+	, @ustrDatabaseName
+	, @ustrSchemaName
+	, @bitSuccessFlag OUTPUT
+	, @strMessageOut OUTPUT; 
+
+    IF @bitSuccessFlag = 1
+
+	
 	BEGIN
 		-- we want to suppress results (perhaps this could be proceduralized as well one to make the table one to kill?)
 		CREATE TABLE #__suppress_results (col1 INT);
 
-		EXEC DD.ShowTableComment @strTableName
+		EXEC Utility.DD.ShowTableComment @str_input_TableName
 			, @boolIsTableCommentSet OUTPUT
 			, @strTableComment OUTPUT;
 
@@ -78,7 +77,7 @@ BEGIN TRY
 		BEGIN
 			SET @strTableSubComment = 'TABLE COMMENT --> ';
 		END
-		SET @dSQLBuildDescribe  = 
+		SET @dSQLBuildDescribe  = CAST(N' '  AS NVARCHAR(MAX)) + 
                     N'WITH fkeys
                     AS (
                         SELECT col.name AS NameofFKColumn
@@ -146,7 +145,7 @@ BEGIN TRY
                     AS (
                         SELECT i2.TableName
                             , i2.IndexName
-                            , i2.IndexID
+                            , i2.IndexId
                             , i2.ColumnId
                             , i2.ColumnName
                             , (
@@ -194,9 +193,9 @@ BEGIN TRY
                             AND col.TABLE_SCHEMA = pk.TABLE_SCHEMA
                             AND col.COLUMN_NAME = pk.COLUMN_NAME
                     LEFT JOIN ' + @ustrDatabaseName + '.sys.extended_properties s
-                        ON s.major_id = OBJECT_ID(col.TABLE_SCHEMA + ''.'' + col.TABLE_NAME)
+                        ON s.major_id = OBJECT_ID(col.TABLE_CATALOG + ''.'' + col.TABLE_SCHEMA + ''.'' + col.TABLE_NAME)
                             AND s.minor_id = col.ORDINAL_POSITION
-                            AND s.name = '' MS_Description ''
+                            AND s.name = ''MS_Description''
                             AND s.class = 1
                     LEFT JOIN fkeys AS fkeys
                         ON col.COLUMN_NAME = fkeys.NameofFKColumn
@@ -230,9 +229,9 @@ BEGIN TRY
 	;
 
 
+	-- FOR OUTPUTTING AND DEBUGGING THE DYNAMIC SQL 👇
 
-
-    SELECT CAST('<root><![CDATA[' + @dSQLTestParams + ']]></root>' AS XML)
+    --SELECT CAST('<root><![CDATA[' + @dSQLBuildDescribe + ']]></root>' AS XML)
 
 
 	SET @dSQLParamaters = '@ustrDatabaseName_d NVARCHAR(64)
@@ -243,10 +242,10 @@ BEGIN TRY
 
 
 EXEC sp_executesql @dSQLBuildDescribe
-, @dSQLTestParams
+, @dSQLParamaters
 , @ustrDatabaseName_d = @ustrDatabaseName
 , @ustrSchemaName_d = @ustrSchemaName
-, @ustrTableName_d = @ustrObjectName
+, @ustrTableName_d = @ustrTableorObjName
 , @strTableSubComment_d = @strTableSubComment
 , @strTableComment_d = @strTableComment;
 
@@ -272,24 +271,67 @@ EXEC sp_executesql @dSQLBuildDescribe
 
 	ELSE
 	BEGIN
-		SET @strMessageOut = ' The table you typed in: ' + @strTableName + ' ' + 'is invalid, check spelling, try again? ';
+		SET @strMessageOut = ' The table you typed in: ' + @ustrTableorObjName + ' ' + 'is invalid, check spelling, try again? ';
 
 		SELECT @strMessageOut AS 'NON_LOGGED_ERROR_MESSAGE'
 	END
 
 		DROP TABLE
 		IF EXISTS #__suppress_results;
+
+		SET NOCOUNT OFF;
 	END TRY
-	BEGIN CATCH
-		INSERT INTO dbo.DB_EXCEPTION_TANK
-		VALUES (
-			SUSER_SNAME()
-			, ERROR_NUMBER()
-			, ERROR_STATE()
-			, ERROR_SEVERITY()
-			, ERROR_PROCEDURE()
-			, ERROR_LINE()
-			, ERROR_MESSAGE()
-			, GETDATE()
-			);
-	END CATCH;
+
+BEGIN CATCH
+	INSERT INTO CustomLog.ERR.DB_EXCEPTION_TANK (
+		[DatabaseName]
+		, [UserName]
+		, [ErrorNumber]
+		, [ErrorState]
+		, [ErrorSeverity]
+		, [ErrorLine]
+		, [ErrorProcedure]
+		, [ErrorMessage]
+		, [ErrorDateTime]
+		)
+	VALUES (
+		DB_NAME()
+		, SUSER_SNAME()
+		, ERROR_NUMBER()
+		, ERROR_STATE()
+		, ERROR_SEVERITY()
+		, ERROR_LINE()
+		, ERROR_PROCEDURE()
+		, ERROR_MESSAGE()
+		, GETDATE()
+		);
+
+        
+PRINT 
+	'Please check the DB_EXCEPTION_TANK an error has been raised. 
+		The query between the lines below will likely get you what you need.
+
+		_____________________________
+
+
+		WITH mxe
+		AS (
+			SELECT MAX(ErrorID) AS MaxError
+			FROM CustomLog.ERR.DB_EXCEPTION_TANK
+			)
+		SELECT ErrorID
+			, DatabaseName
+			, UserName
+			, ErrorNumber
+			, ErrorState
+			, ErrorLine
+			, ErrorProcedure
+			, ErrorMessage
+			, ErrorDateTime
+		FROM CustomLog.ERR.DB_EXCEPTION_TANK et
+		INNER JOIN mxe
+			ON et.ErrorID = mxe.MaxError
+
+		_____________________________
+';
+END CATCH

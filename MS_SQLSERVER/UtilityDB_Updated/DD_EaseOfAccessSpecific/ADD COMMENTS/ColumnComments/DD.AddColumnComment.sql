@@ -15,7 +15,7 @@ CREATE
 
 ALTER PROCEDURE [DD].[AddColumnComment]
 	-- Add the parameters for the stored procedure here
-	@strTableName NVARCHAR(64)
+	@ustrFQON NVARCHAR(64)
 	, @strColumnName NVARCHAR(64)
 	, @strComment NVARCHAR(360)
 AS
@@ -25,7 +25,7 @@ DECLARE @vrtComment SQL_VARIANT
 	, @strErrorMessage VARCHAR(MAX)
 	, @ustrDatabaseName NVARCHAR(64)
 	, @ustrSchemaName NVARCHAR(64)
-	, @ustrObjectName NVARCHAR(64)
+	, @ustrTableorObjName NVARCHAR(64)
 	, @dSQLNotExistCheck NVARCHAR(MAX)
 	, @dSQLNotExistCheckProperties NVARCHAR(MAX) -- could recycle previous var, don't want to
 	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of wether or not we add or update hence 'apply'
@@ -55,10 +55,10 @@ DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MA
 BEGIN TRY
 	SET NOCOUNT ON;
 		--we do this type of insert to prevent seeing useless selects in the grid view on a SQL developer
-	EXEC Utility.DD.prc_DBSchemaObjectAssignment @strTableName
+	EXEC Utility.DD.prc_DBSchemaObjectAssignment @ustrFQON
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
-												, @ustrObjectName OUTPUT;
+												, @ustrTableorObjName OUTPUT;
 	
 	 /**REVIEW: if it becomes a problem where people are typing in tables wrong  all the time (check the exception log)
 	 * we can certainly add the Utility.UTL.DD_TableExist first and if that fails just dump the procedure and show an error message
@@ -67,7 +67,7 @@ BEGIN TRY
 	 */
 
 	 
-	EXEC Utility.DD.prc_ColumnExist @ustrObjectName
+	EXEC Utility.DD.prc_ColumnExist @ustrTableorObjName
 		, @strColumnName
 		, @ustrDatabaseName
 		, @ustrSchemaName
@@ -79,7 +79,7 @@ BEGIN TRY
 		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
 		  */
-		SET @bitIsThisAView = Utility.DD.fn_IsThisTheNameOfAView(@ustrObjectName);
+		SET @bitIsThisAView = Utility.DD.fn_IsThisTheNameOfAView(@ustrTableorObjName);
 
 		IF @bitIsThisAView = 0
 			SET @ustrViewOrTable = 'TABLE';
@@ -119,7 +119,7 @@ BEGIN TRY
 											  	+ '.'
 											  	+ @ustrSchemaName
 											  	+ '.'
-											  	+ @ustrObjectName
+											  	+ @ustrTableorObjName
 											  	+ ''''
 											  	+ ')'
 											  	+	' AND [name] = N''MS_Description''		
@@ -138,7 +138,7 @@ BEGIN TRY
 											  	+ '.'
 											  	+ @ustrSchemaName
 											  	+ '.'
-											  	+ @ustrObjectName
+											  	+ @ustrTableorObjName
 											  	+ ''''
 												+								' )   )';
 			INSERT INTO #__SuppressOutputAddColumnComment
@@ -170,7 +170,7 @@ BEGIN TRY
 											+ ''''										
 											+ ', @level1name = '
 											+ ''''
-											+	@ustrObjectName
+											+	@ustrTableorObjName
 											+ ''''
 											+ ', @level2type = N''COLUMN'' '
 											+ ', @level2name = N'
@@ -204,7 +204,7 @@ BEGIN TRY
 											+ ''''										
 											+ ', @level1name = '
 											+ ''''
-											+	@ustrObjectName
+											+	@ustrTableorObjName
 											+ ''''
 											+ ', @level2type = N''COLUMN'' '
 											+ ', @level2name = N'
@@ -309,13 +309,13 @@ END CATCH
 		-- IF NOT EXISTS
 			SELECT NULL
 				FROM QUOTENAME(@ustrDatabaseName).sys.extended_properties
-				WHERE [major_id] = OBJECT_ID(@strTableName)
+				WHERE [major_id] = OBJECT_ID(@ustrFQON)
 					AND [name] = N'MS_Description'
 					AND [minor_id] = (
 						SELECT [column_id]
 						FROM QUOTENAME(@ustrDatabaseName).sys.columns
 						WHERE [name] = @strColumnName
-							AND [object_id] = OBJECT_ID(@strTableName);
+							AND [object_id] = OBJECT_ID(@ustrFQON);
 
 		-- add properties
 			EXECUTE sp_addextendedproperty @name = N'MS_Description'
@@ -323,7 +323,7 @@ END CATCH
 				, @level0type = N'SCHEMA'
 				, @level0name = N'dbo'
 				, @level1type = N'TABLE'
-				, @level1name = @strTableName
+				, @level1name = @ustrFQON
 				, @level2type = N'COLUMN'
 				, @level2name = @strColumnName;
 		-- update properties
@@ -332,7 +332,7 @@ END CATCH
 				, @level0type = N'SCHEMA'
 				, @level0name = N'dbo'
 				, @level1type = N'TABLE'
-				, @level1name = @strTableName
+				, @level1name = @ustrFQON
 				, @level2type = N'COLUMN'
 				, @level2name = @strColumnName;
 	*/
@@ -352,7 +352,7 @@ END CATCH
 	DECLARE @strColName VARCHAR(64) = '';
 	DECLARE @ustrComment NVARCHAR(400) = N'';
 
-	EXEC Utility.UTL.DD_AddColumnComment @ustrFullyQualifiedTable
+	EXEC Utility.DD.AddColumnComment @ustrFullyQualifiedTable
 		, @strColName
 		, @ustrComment; 
 

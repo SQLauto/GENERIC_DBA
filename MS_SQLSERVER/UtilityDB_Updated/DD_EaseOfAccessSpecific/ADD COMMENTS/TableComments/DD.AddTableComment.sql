@@ -8,11 +8,12 @@ GO
 -- Description:		This will either add or wipe and update the comments on a table
 -- SubProcedures:	1.	[Utility].[DD].[prc_DBSchemaObjectAssignment]
 --					2.  [Utility].[DD].[prc_TableExist]
---					3.	 [Utility].[DD].[fn_IsThisTheNameOfAView]
+--					3.	[Utility].[DD].[fn_IsThisTheNameOfAView]
+-- TODO: 			Upon update add the old value to some sort of LogTable, along with the user doing it.
 -- ==========================================================================================
 CREATE OR ALTER PROCEDURE DD.AddTableComment
 	-- Add the parameters for the stored procedure here
-	@strTableName NVARCHAR(200)
+	@ustrFQON NVARCHAR(200)
 	, @strComment NVARCHAR(360)
 AS
 /**Note: vrt is for Variant, which is the absurd way SQL Server stores it's Strings in the data dictionary
@@ -21,7 +22,7 @@ DECLARE @vrtComment SQL_VARIANT
 	, @strErrorMessage VARCHAR(MAX)
 	, @ustrDatabaseName NVARCHAR(64)
 	, @ustrSchemaName NVARCHAR(64)
-	, @ustrObjectName NVARCHAR(64)
+	, @ustrTableOrObjName NVARCHAR(64)
 	, @dSQLNotExistCheck NVARCHAR(MAX)
 	, @dSQLNotExistCheckProperties NVARCHAR(MAX) -- could recycle previous var, don't want to
 	, @dSQLApplyComment NVARCHAR(MAX) -- will use the same  dynamic sql variable name regardless of whether or not we add or update hence 'apply'
@@ -54,14 +55,14 @@ BEGIN TRY
 	SET NOCOUNT ON;
 	--break apart the fully qualified object name
 	INSERT INTO #__SuppressOutputAddTableComment
-	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @strTableName
+	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
-												, @ustrObjectName OUTPUT;
+												, @ustrTableOrObjName OUTPUT;
 
 
-			/**Check to see if the column or table actually exists -- Babler*/
 	INSERT INTO #__SuppressOutputAddTableComment
+	VALUES(NULL);
 
 
 
@@ -70,20 +71,17 @@ BEGIN TRY
 		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
 		  */
-		SET @bitIsThisAView = [Utility].[DD].[fn_IsThisTheNameOfAView](@ustrObjectName);
+		SELECT @bitIsThisAView = [Utility].[DD].[fn_IsThisTheNameOfAView](@ustrTableOrObjName);
 
 		IF @bitIsThisAView = 0
 			SET @ustrViewOrTable = 'TABLE';
 		ELSE
 			SET @ustrViewOrTable = 'VIEW';
 
+			/**Check to see if the column or table actually exists -- Babler*/
 	IF @boolExistFlag = 0
 	BEGIN
-
 		SET @boolCatchFlag = 1;
-
-
-
 		RAISERROR (
 				@ustrMessageOut
 				, 11
@@ -110,7 +108,7 @@ ELSE
 											  + '.'
 											  + @ustrSchemaName
 											  + '.'
-											  + @ustrObjectName
+											  + @ustrTableOrObjName
 											  + ''''
 											  + ')'
 											  +	' AND [name] = N''MS_Description''
@@ -146,7 +144,7 @@ ELSE
 										+ ''''										
 										+ ', @level1name = '
 										+ ''''
-										+	@ustrObjectName
+										+	@ustrTableOrObjName
 										+ '''';
 			END
 		ELSE
@@ -172,7 +170,7 @@ ELSE
 										+ ''''										
 										+ ', @level1name = '
 										+ ''''
-										+	@ustrObjectName
+										+	@ustrTableOrObjName
 										+ '''';
 
 			END
@@ -271,7 +269,7 @@ END CATCH;
 
 					SELECT NULL
 					FROM QUOTENAME(@ustrDatabaseName).SYS.EXTENDED_PROPERTIES
-					WHERE [major_id] = OBJECT_ID(@ustrObjectName)
+					WHERE [major_id] = OBJECT_ID(@ustrTableOrObjName)
 						AND [name] = N'MS_Description'
 						AND [minor_id] = 0
 
@@ -283,7 +281,7 @@ END CATCH;
 		          , @level0type = N'SCHEMA'
 		          , @level0name = @ustrSchemaName
 		          , @level1type = N'TABLE'
-		          , @level1name = @strTableName;
+		          , @level1name = @ustrFQON;
 
         -- replace the properties  if they already exist
                 --be advised trying to run this without dynamic sql call will not work.
@@ -292,7 +290,7 @@ END CATCH;
 		          , @level0type = N'SCHEMA'
 		          , @level0name = N'dbo'
 		          , @level1type = N'TABLE'
-		          , @level1name = @strTableName;
+		          , @level1name = @ustrFQON;
             
 		*/
 

@@ -1,4 +1,9 @@
-USE [Utility];
+USE [Utility]
+GO
+/****** Object:  StoredProcedure [DD].[prc_DBSchemaObjectAssignment]    Script Date: 4/28/2021 3:32:59 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 -- =============================================
@@ -12,12 +17,12 @@ GO
 -- 					2 sp_executesql -- system procedure, dynamic SQL.
 --
 -- =============================================
-CREATE	OR ALTER PROCEDURE [DD].[prc_DBSchemaObjectAssignment]
+ALTER	  PROCEDURE [DD].[prc_DBSchemaObjectAssignment]
 	-- Add the parameters for the stored procedure here
 	@strQualifiedObjectBeingCalled NVARCHAR(200) --64*3+UP TO 2 PERIODS TO NEXT OCTET
 	, @ustrDatabaseName NVARCHAR(64) = NULL OUTPUT
 	, @ustrSchemaName NVARCHAR(64) = NULL OUTPUT
-	, @ustrObjectName NVARCHAR(64) = NULL OUTPUT
+	, @ustObjectOrTableName NVARCHAR(64) = NULL OUTPUT
 AS
 BEGIN TRY
 	DROP TABLE
@@ -53,7 +58,11 @@ BEGIN TRY
 
 		SELECT @intNumPiecesEntered = MAX(intPosition)
 		FROM #tblObjectBreakdown;
-
+				SET @ustrSQLTOExecute = 
+				N'SELECT @ustrObjectFromTemp_ph = ustrObjectPiece 
+                                            FROM #tblObjectBreakdown
+                                            WHERE intPosition = @intDesiredPiece_ph'
+				;
 		IF @intNumPiecesEntered = 3
 			/*Ostensibly all 3 pieces are entered so let's check that and then assign them */
 		BEGIN
@@ -61,30 +70,24 @@ BEGIN TRY
                     * In this case, we are ok because all we are using a temporary table that WE built, and we are assigning variables
                     * and as such it should be cool.  Dave Babler 2020-11-15 */
 			--rip through the pieces and assign them to outputs
-			SET @ustrSQLTOExecute = 
-				N'SELECT @ustrObjectFromTemp_ph = ustrObjectPiece 
-                                            FROM #tblObjectBreakdown
-                                            WHERE intPosition = @intDesiredPiece_ph'
-				;
+	
 			SET @intDesiredPiece = 1;
 
 			EXEC sp_executesql @ustrSQLTOExecute
 				, @uDynamSQLParams
 				, @ustrObjectFromTemp_ph = @ustrDataBaseName OUTPUT --grabs database name
 				, @intDesiredPiece_ph = @intDesiredPiece;
-
 			SET @intDesiredPiece = 2;
 
 			EXEC sp_executesql @ustrSQLTOExecute
 				, @uDynamSQLParams
 				, @ustrObjectFromTemp_ph = @ustrSchemaName OUTPUT --grabs schema name
 				, @intDesiredPiece_ph = @intDesiredPiece;
-
 			SET @intDesiredPiece = 3;
 
 			EXEC sp_executesql @ustrSQLTOExecute
 				, @uDynamSQLParams
-				, @ustrObjectFromTemp_ph = @ustrObjectName OUTPUT --grabs object name
+				, @ustrObjectFromTemp_ph = @ustObjectOrTableName OUTPUT --grabs object name
 				, @intDesiredPiece_ph = @intDesiredPiece;
 		END
 		ELSE IF @intNumPiecesEntered = 2
@@ -102,19 +105,20 @@ BEGIN TRY
 
 			EXEC sp_executesql @ustrSQLTOExecute
 				, @uDynamSQLParams
-				, @ustrObjectFromTemp_ph = @ustrObjectName OUTPUT --grabs object name
+				, @ustrObjectFromTemp_ph = @ustObjectOrTableName OUTPUT --grabs object name
 				, @intDesiredPiece_ph = @intDesiredPiece;
 		END
-	END
-	ELSE
+			ELSE
 	BEGIN
 		SET @ustrSchemaName = @ustrDefaultSchema;
 		SET @ustrDatabaseName = @ustrDefaultDatabase;
-		SET @ustrObjectName = @strQualifiedObjectBeingCalled;
+		SET @ustObjectOrTableName = @strQualifiedObjectBeingCalled;
 
 			--check info schema to make sure the schmea and the db actually exist.
 	END
-			-- PRINT @ustrSchemaName + ' ' + @ustrDatabaseName + ' ' +  @ustrObjectName;
+
+	END
+	SET NOCOUNT OFF;
 END TRY
 
 
@@ -138,7 +142,7 @@ BEGIN CATCH
 		, ERROR_STATE()
 		, ERROR_SEVERITY()
 		, ERROR_LINE()
-		, ERROR_PROCEDURE()
+		, ERROR_PROCEDURE() + OBJECT_NAME(@@PROCID)
 		, ERROR_MESSAGE()
 		, GETDATE()
 		);
@@ -149,16 +153,16 @@ END CATCH;
 	/*   
 		DECLARE @ustrDatabaseName NVARCHAR(64)
 			, @ustrSchemaName NVARCHAR(64)
-			, @ustrObjectName NVARCHAR(64);
+			, @ustObjectOrTableName NVARCHAR(64);
 
-		EXEC DD.prc_DBSchemaObjectAssignment 'VALUE.OTHERVALUE.THIRDVALUE'
+		EXEC DD.prc_DBSchemaObjectAssignment 'ADB.SOMESCHEMA.ATABLEORVIEW'
 			, @ustrDatabaseName OUTPUT
 			, @ustrSchemaName OUTPUT
-			, @ustrObjectName OUTPUT;
+			, @ustObjectOrTableName OUTPUT;
 
 		SELECT @ustrDatabaseName
 			, @ustrSchemaName
-			, @ustrObjectName;
+			, @ustObjectOrTableName;
 
  */
 

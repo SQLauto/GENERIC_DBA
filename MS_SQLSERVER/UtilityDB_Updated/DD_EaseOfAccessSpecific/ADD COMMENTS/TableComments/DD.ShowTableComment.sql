@@ -19,7 +19,7 @@ GO
 CREATE
 	OR
 
-ALTER PROCEDURE DD.ShowTableComment @strTableName NVARCHAR(64)
+ALTER PROCEDURE DD.ShowTableComment @ustrFQON NVARCHAR(200)
 	, @boolOptionalSuccessFlag BIT = NULL OUTPUT
 	, @strOptionalMessageOut NVARCHAR(320) = NULL OUTPUT
 	/** The success flag will be used when passing this to other procedures to see if table comments exist.
@@ -33,7 +33,7 @@ DECLARE @ustrMessageOut NVARCHAR(320)
 	, @bitExistFlag BIT
 	, @ustrDatabaseName NVARCHAR(64)
 	, @ustrSchemaName NVARCHAR(64)
-	, @ustrObjectName NVARCHAR(64)
+	, @ustrTableOrObjName NVARCHAR(64)
 	, @ustrViewOrTable NVARCHAR(8)
 	, @dSQLCheckForComment NVARCHAR(MAX)
 	, @dSQLPullComment NVARCHAR(MAX)
@@ -51,24 +51,24 @@ BEGIN TRY
 	SELECT @bitSuppressVisualOutput = [Utility].[UTL].[fn_SuppressOutput]();
 
 	--first blow apart the fully qualified object name
-	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @strTableName
+	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
 		, @ustrDatabaseName OUTPUT
 		, @ustrSchemaName OUTPUT
-		, @ustrObjectName OUTPUT;
+		, @ustrTableOrObjName OUTPUT;
 
 
 		/** Next Check to see if the name is for a view instead of a table, alter the function to fit your agency's naming conventions
 		 * Not necessary to check this beforehand as the previous calls will work for views and tables due to how
 		 * INFORMATION_SCHEMA is set up.  Unfortunately from this point on we'll be playing with Microsoft's sys tables
 		  */
-		SET @bitIsThisAView = [Utility].[DD].[fn_IsThisTheNameOfAView](@ustrObjectName);
+		SET @bitIsThisAView = [Utility].[DD].[fn_IsThisTheNameOfAView](@ustrTableOrObjName);
 
 		IF @bitIsThisAView = 0
 			SET @ustrViewOrTable = 'TABLE';
 		ELSE
 			SET @ustrViewOrTable = 'VIEW';
 
-	EXEC [Utility].[DD].[prc_TableExist] @ustrObjectName
+	EXEC [Utility].[DD].[prc_TableExist] @ustrTableOrObjName
 		, @ustrDatabaseName
 		, @ustrSchemaName
 		, @bitExistFlag OUTPUT
@@ -90,7 +90,7 @@ BEGIN TRY
 									+ '.'
 									+ @ustrSchemaName
 									+ '.'
-									+ @ustrObjectName
+									+ @ustrTableOrObjName
 									+''''
 									+')'
 									+ ' AND [name] = N''MS_Description''
@@ -122,7 +122,7 @@ BEGIN TRY
 								) AS tp
 									ON t.TABLE_NAME = tp.epTableName
 								WHERE TABLE_TYPE = ''BASE TABLE''
-								AND tp.epTableName = @ustrObjectName
+								AND tp.epTableName = @ustrTableOrObjName
 									AND t.TABLE_CATALOG = @ustrDatabaseName
 									AND t.TABLE_SCHEMA = @ustrSchemaName'
 					;
@@ -133,17 +133,17 @@ PRINT @dSQLPullComment
 			SET @dSQLPullCommentParameters = 
 				N' @ustrDatabaseName NVARCHAR(64)
 				, @ustrSchemaName NVARCHAR(64)
-				, @ustrObjectName NVARCHAR(64)
+				, @ustrTableOrObjName NVARCHAR(64)
 				, @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
 				;
 				EXECUTE sp_executesql @dSQLPullComment
 					, N' @ustrDatabaseName NVARCHAR(64)
 				, @ustrSchemaName NVARCHAR(64)
-				, @ustrObjectName NVARCHAR(64)
+				, @ustrTableOrObjName NVARCHAR(64)
 				, @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
 					, @ustrDatabaseName = @ustrDatabaseName
 					, @ustrSchemaName = @ustrSchemaName
-					, @ustrObjectName = @ustrObjectName
+					, @ustrTableOrObjName = @ustrTableOrObjName
 					, @ustrMessageOutTemp = @ustrMessageOut OUTPUT;
 
 
@@ -156,20 +156,20 @@ PRINT @dSQLPullComment
 		ELSE
 		BEGIN
 			SET @boolOptionalSuccessFlag = 0;--let any proc calling know that there is no table comments yet.
-			SET @ustrMessageOut = @ustrDataBaseName + '.' + @ustrSchemaName + '.'+  @ustrObjectName + 
+			SET @ustrMessageOut = @ustrDataBaseName + '.' + @ustrSchemaName + '.'+  @ustrTableOrObjName + 
 				N' currently has no comments please use Utility.DD.AddTableComment to add comments!';
 			SET @strOptionalMessageOut = @ustrMessageOut;
 		END
 
 		IF @bitSuppressVisualOutput = 0
 		BEGIN
-			SELECT @ustrObjectName AS 'Table Name'
+			SELECT @ustrTableOrObjName AS 'Table Name'
 				, @ustrMessageOut AS 'TableComment';
 		END
 	END
 	ELSE
 	BEGIN
-		SET @ustrMessageOut = ' The table you typed in: ' + @ustrObjectName + ' ' + 'is invalid, check spelling, try again? ';
+		SET @ustrMessageOut = ' The table you typed in: ' + @ustrTableOrObjName + ' ' + 'is invalid, check spelling, try again? ';
 
 		SELECT @ustrMessageOut AS 'NON_LOGGED_ERROR_MESSAGE'
 	END
@@ -228,7 +228,7 @@ PRINT
 		_____________________________
 
 '
-	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^TESTING BLOCK^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--TESTING BLOCK--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	/* 
 	DECLARE @ustrFullyQualifiedTable NVARCHAR(64) = N'';
 	DECLARE @boolOptionalSuccessFlag BIT = NULL;
@@ -242,7 +242,7 @@ PRINT
 		, @strOptionalMessageOut AS 'Optional Output Message';
 
 */
-	--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+--vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 --~~~~~~~~~~~~~~~~~~~~~~~~~DYNAMIC SQL~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /* 
 ;WITH tp (
@@ -261,7 +261,7 @@ FROM INFORMATION_SCHEMA.TABLES AS t
 INNER JOIN tp
 	ON t.TABLE_NAME = tp.epTableName
 WHERE TABLE_TYPE = N'BASE TABLE'
-	AND tp.epTableName = @ustrObjectName
+	AND tp.epTableName = @ustrTableOrObjName
 	AND t.TABLE_CATALOG = @ustrDatabaseName
 	AND t.TABLE_SCHEMA = @ustrSchemaName;
 	 */

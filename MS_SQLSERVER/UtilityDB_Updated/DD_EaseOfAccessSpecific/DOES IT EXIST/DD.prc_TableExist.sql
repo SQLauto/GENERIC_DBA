@@ -1,4 +1,9 @@
-USE [Utility];
+USE [Utility]
+GO
+/****** Object:  StoredProcedure [DD].[prc_TableExist]    Script Date: 4/28/2021 3:08:05 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 
@@ -8,10 +13,10 @@ GO
 -- Last Modified:   11/23/2020
 -- Description:	    Checks to see if table exists use output boolean for logic flow in other procedures
 -- =============================================
-CREATE
-	OR
+ALTER
+	
 
-ALTER PROCEDURE [DD].[prc_TableExist] @ustrTableName NVARCHAR(64)
+ PROCEDURE [DD].[prc_TableExist] @ustrTableName NVARCHAR(64)
 	, @ustrDBName NVARCHAR(64)
 	, --SHOULD BE PASSED IN FROM ANOTHER PROC
 	@ustrSchemaName NVARCHAR(64)
@@ -34,9 +39,12 @@ BEGIN TRY
                                WHERE TABLE_NAME = @ustrTable 
                                     AND TABLE_SCHEMA = @ustrSchema'
 		;
+	DROP TABLE IF EXISTS #__beQuiet ;
+	CREATE TABLE #__beQuiet (Shhhh INT)---Suppresses output
 
-
-
+	IF DB_ID(@ustrDBName) IS NOT NULL
+	BEGIN 
+	INSERT INTO #__beQuiet
 	EXECUTE sp_executesql @SQLCheckForTable
 		, N'@ustrTable NVARCHAR(64), @ustrSchema NVARCHAR(64)'
 		, @ustrTable = @ustrTableName
@@ -58,8 +66,13 @@ BEGIN TRY
 		SET @boolSuccessFlag = 1;
 		SET @ustrMessageOut = NULL;
 	END
-
+	END
+	ELSE 
+	BEGIN 
+		SET @ustrMessageOut = @ustrDBName + @ustrOutGoingMessageEnd;
+	END
 	SET NOCOUNT OFF;
+	DROP TABLE #__beQuiet;
 END TRY
 
 BEGIN CATCH

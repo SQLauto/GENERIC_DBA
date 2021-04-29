@@ -15,7 +15,7 @@ GO
 -- ==========================================================================================
 CREATE or alter  PROCEDURE [DD].[ShowColumnComment] 
 	-- Add the parameters for the stored procedure here
-	@strTableName NVARCHAR(64)
+	@ustrFQON NVARCHAR(64)
 	, @ustrColumnName NVARCHAR(64)
 AS
 
@@ -23,7 +23,7 @@ AS
 DECLARE @ustrMessageOut NVARCHAR(320)
 , @ustrDatabaseName NVARCHAR(64) 
 , @ustrSchemaName NVARCHAR(64)
-, @ustrObjectName  NVARCHAR(64)
+, @ustrTableOrObjName  NVARCHAR(64)
 , @intRowCount INT
 , @boolExistFlag BIT
 , @dSQLCheckForComment NVARCHAR(MAX)
@@ -34,12 +34,12 @@ CREATE TABLE #__SuppressOutputColumnComment(
 	SuppressedOutput VARCHAR(MAX)
 )
 BEGIN TRY
-EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @strTableName
+EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
 	, @ustrDatabaseName OUTPUT
 	, @ustrSchemaName OUTPUT
-	, @ustrObjectName OUTPUT;
+	, @ustrTableOrObjName OUTPUT;
 
-EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
+EXEC [Utility].[DD].[prc_ColumnExist] @ustrTableOrObjName
 	, @ustrColumnName
 	, @ustrDatabaseName
 	, @ustrSchemaName
@@ -62,7 +62,7 @@ EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
 											  + '.'
 											  + @ustrSchemaName
 											  + '.'
-											  + @ustrObjectName
+											  + @ustrTableOrObjName
 											  + ''''
                                          + ')
                         AND [name] = N''MS_Description''
@@ -80,7 +80,7 @@ EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
 											  + '.'
 											  + @ustrSchemaName
 											  + '.'
-											  + @ustrObjectName
+											  + @ustrTableOrObjName
 											  + ''''
                                          + ')
                             )
@@ -112,20 +112,20 @@ EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
                 +'.sys.columns AS c	
                     ON ep.major_id = c.object_id
                         AND ep.minor_id = c.column_id
-                WHERE st.name = @ustrObjectName
+                WHERE st.name = @ustrTableOrObjName
                     AND c.name = @ustrColumnName';
                 SET @dSQLPullCommentParameters = 
                     N' @ustrColumnName NVARCHAR(64)
-                                , @ustrObjectName NVARCHAR(64)
+                                , @ustrTableOrObjName NVARCHAR(64)
                                 , @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
                     ;
 
                 EXECUTE sp_executesql @dSQLPullComment
                 , N'@ustrColumnName NVARCHAR(64)
-                            , @ustrObjectName NVARCHAR(64)
+                            , @ustrTableOrObjName NVARCHAR(64)
                             , @ustrMessageOutTemp NVARCHAR(320) OUTPUT'
                 , @ustrColumnName = @ustrColumnName
-                , @ustrObjectName = @ustrObjectName
+                , @ustrTableOrObjName = @ustrTableOrObjName
                 , @ustrMessageOutTemp = @ustrMessageOut OUTPUT;
 
 
@@ -133,7 +133,7 @@ EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
             END
             ELSE
             BEGIN
-                SET @ustrMessageOut = @strTableName + ' ' + @ustrColumnName + 
+                SET @ustrMessageOut = @ustrFQON + ' ' + @ustrColumnName + 
                     N' currently has no comments please use Utility.DD.AddColumnComment to add a comment!';
             END
 
@@ -143,7 +143,7 @@ EXEC [Utility].[DD].[prc_ColumnExist] @ustrObjectName
     ELSE 
         BEGIN
          SET @ustrMessageOut = 'Either the column you typed in: ' + @ustrColumnName + ' or, '
-                            + ' the table you typed in: ' + @strTableName + ' '
+                            + ' the table you typed in: ' + @ustrFQON + ' '
                             + 'is invalid, check spelling, try again? ';
          SELECT @ustrMessageOut AS 'NON_LOGGED_ERROR_MESSAGE'
         END
@@ -169,7 +169,7 @@ BEGIN CATCH
 		, ERROR_STATE()
 		, ERROR_SEVERITY()
 		, ERROR_LINE()
-		, ERROR_PROCEDURE()
+		, ERROR_PROCEDURE() + OBJECT_NAME(@@PROCID)
 		, ERROR_MESSAGE()
 		, GETDATE()
 		);
@@ -209,7 +209,7 @@ END CATCH
             DECLARE	@return_value int
 
             EXEC	@return_value = Utility.[DD].[ShowColumnComment]
-                    @strTableName = N'Galactic.dbo.WorkDone',
+                    @ustrFQON = N'Galactic.dbo.WorkDone',
                     @ustrColumnName = N'Description'
 
             SELECT	'Return Value' = @return_value
@@ -225,13 +225,13 @@ END CATCH
 /* 
 SELECT NULL
 FROM SYS.EXTENDED_PROPERTIES
-WHERE [major_id] = OBJECT_ID(@strTableName)
+WHERE [major_id] = OBJECT_ID(@ustrFQON)
 	AND [name] = N'MS_Description'
 	AND [minor_id] = (
 		SELECT [column_id]
 		FROM SYS.COLUMNS
 		WHERE [name] = @ustrColumnName
-			AND [object_id] = OBJECT_ID(@strTableName)
+			AND [object_id] = OBJECT_ID(@ustrFQON)
 		);
 
 SELECT TOP 1 @ustrMessageOutTemp = CAST(ep.value AS NVARCHAR(320))
@@ -243,7 +243,7 @@ INNER JOIN [DatabaseName].sys.tables AS st
 INNER JOIN [DatabaseName].sys.columns AS c
 	ON ep.major_id = c.object_id
 		AND ep.minor_id = c.column_id
-WHERE st.name = @strTableName
+WHERE st.name = @ustrFQON
 	AND c.name = @ustrColumnName
    
   */
