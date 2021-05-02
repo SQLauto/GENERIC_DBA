@@ -67,7 +67,7 @@ BEGIN TRY
 	 */
 
 	 
-	EXEC Utility.DD.prc_ColumnExist @ustrTableorObjName
+	EXEC Utility.DD.ColumnExist @ustrTableorObjName
 		, @strColumnName
 		, @ustrDatabaseName
 		, @ustrSchemaName

@@ -10,7 +10,7 @@ GO
 -- Description:	    This procedure makes viewing comments on a single column much more accessible.
 -- Subprocedures: 	1. [Utility].[UTL].[fn_SuppressOutput]
 -- 					2. [Utility].[DD].[prc_DBSchemaObjectAssignment]
--- 					3. [Utility].[DD].[prc_ColumnExist]
+-- 					3. [Utility].[DD].[ColumnExist]
 --  				4. [Utility].[DD].[fn_IsThisTheNameOfAView]
 -- ==========================================================================================
 CREATE or alter  PROCEDURE [DD].[ShowColumnComment] 
@@ -39,7 +39,7 @@ EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
 	, @ustrSchemaName OUTPUT
 	, @ustrTableOrObjName OUTPUT;
 
-EXEC [Utility].[DD].[prc_ColumnExist] @ustrTableOrObjName
+EXEC [Utility].[DD].[ColumnExist] @ustrTableOrObjName
 	, @ustrColumnName
 	, @ustrDatabaseName
 	, @ustrSchemaName
