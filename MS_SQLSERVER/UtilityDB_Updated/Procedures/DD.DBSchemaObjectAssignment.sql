@@ -1,6 +1,6 @@
 USE [Utility]
 GO
-/****** Object:  StoredProcedure [DD].[prc_DBSchemaObjectAssignment]    Script Date: 4/28/2021 3:32:59 PM ******/
+/****** Object:  StoredProcedure [DD].[DBSchemaObjectAssignment]    Script Date: 4/28/2021 3:32:59 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,7 +17,7 @@ GO
 -- 					2 sp_executesql -- system procedure, dynamic SQL.
 --
 -- =============================================
-ALTER	  PROCEDURE [DD].[prc_DBSchemaObjectAssignment]
+ALTER	  PROCEDURE [DD].[DBSchemaObjectAssignment]
 	-- Add the parameters for the stored procedure here
 	@strQualifiedObjectBeingCalled NVARCHAR(200) --64*3+UP TO 2 PERIODS TO NEXT OCTET
 	, @ustrDatabaseName NVARCHAR(64) = NULL OUTPUT
@@ -155,7 +155,7 @@ END CATCH;
 			, @ustrSchemaName NVARCHAR(64)
 			, @ustObjectOrTableName NVARCHAR(64);
 
-		EXEC DD.prc_DBSchemaObjectAssignment 'ADB.SOMESCHEMA.ATABLEORVIEW'
+		EXEC DD.DBSchemaObjectAssignment 'ADB.SOMESCHEMA.ATABLEORVIEW'
 			, @ustrDatabaseName OUTPUT
 			, @ustrSchemaName OUTPUT
 			, @ustObjectOrTableName OUTPUT;

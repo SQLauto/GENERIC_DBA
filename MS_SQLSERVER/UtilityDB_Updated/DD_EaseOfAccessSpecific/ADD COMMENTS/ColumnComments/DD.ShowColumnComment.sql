@@ -9,7 +9,7 @@ GO
 -- Last Updated:	2021-04-24
 -- Description:	    This procedure makes viewing comments on a single column much more accessible.
 -- Subprocedures: 	1. [Utility].[UTL].[fn_SuppressOutput]
--- 					2. [Utility].[DD].[prc_DBSchemaObjectAssignment]
+-- 					2. [Utility].[DD].[DBSchemaObjectAssignment]
 -- 					3. [Utility].[DD].[ColumnExist]
 --  				4. [Utility].[DD].[fn_IsThisTheNameOfAView]
 -- ==========================================================================================
@@ -34,7 +34,7 @@ CREATE TABLE #__SuppressOutputColumnComment(
 	SuppressedOutput VARCHAR(MAX)
 )
 BEGIN TRY
-EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
+EXEC [Utility].[DD].[DBSchemaObjectAssignment] @ustrFQON
 	, @ustrDatabaseName OUTPUT
 	, @ustrSchemaName OUTPUT
 	, @ustrTableOrObjName OUTPUT;

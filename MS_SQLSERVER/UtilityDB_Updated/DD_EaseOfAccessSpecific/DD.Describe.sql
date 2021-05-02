@@ -38,7 +38,7 @@ BEGIN TRY
 SET NOCOUNT ON;
 		DROP TABLE IF EXISTS ##DESCRIBE;  --for future output to temp tables ignore for now
 	/** First check to see if a schema was specified in the input paramater, schema.table, else default to dbo. -- Babler*/
-		EXEC Utility.DD.prc_DBSchemaObjectAssignment @str_input_TableName
+		EXEC Utility.DD.DBSchemaObjectAssignment @str_input_TableName
 			, @ustrDatabaseName OUTPUT
 			, @ustrSchemaName OUTPUT
 			, @ustrTableorObjName OUTPUT;

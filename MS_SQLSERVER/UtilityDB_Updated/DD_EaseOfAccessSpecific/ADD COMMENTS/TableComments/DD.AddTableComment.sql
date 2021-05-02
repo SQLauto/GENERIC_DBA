@@ -6,7 +6,7 @@ GO
 -- Last Edited By:	Dave Babler
 -- Last Updated:	2021-04-24
 -- Description:		This will either add or wipe and update the comments on a table
--- SubProcedures:	1.	[Utility].[DD].[prc_DBSchemaObjectAssignment]
+-- SubProcedures:	1.	[Utility].[DD].[DBSchemaObjectAssignment]
 --					2.  [Utility].[DD].[TableExist]
 --					3.	[Utility].[DD].[fn_IsThisTheNameOfAView]
 -- TODO: 			Upon update add the old value to some sort of LogTable, along with the user doing it.
@@ -55,7 +55,7 @@ BEGIN TRY
 	SET NOCOUNT ON;
 	--break apart the fully qualified object name
 	INSERT INTO #__SuppressOutputAddTableComment
-	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
+	EXEC [Utility].[DD].[DBSchemaObjectAssignment] @ustrFQON
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
 												, @ustrTableOrObjName OUTPUT;

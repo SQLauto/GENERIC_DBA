@@ -12,7 +12,7 @@ GO
 -- Last Updated:	2021-04-24
 -- Description:		Checks to see if table comments exist
 -- Subprocedures: 	1. [Utility].[UTL].[fn_SuppressOutput]
--- 					2. [Utility].[DD].[prc_DBSchemaObjectAssignment]
+-- 					2. [Utility].[DD].[DBSchemaObjectAssignment]
 -- 					3. [Utility].[DD].[TableExist]
 --  				4. [Utility].[DD].[fn_IsThisTheNameOfAView]
 -- ==========================================================================================
@@ -51,7 +51,7 @@ BEGIN TRY
 	SELECT @bitSuppressVisualOutput = [Utility].[UTL].[fn_SuppressOutput]();
 
 	--first blow apart the fully qualified object name
-	EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
+	EXEC [Utility].[DD].[DBSchemaObjectAssignment] @ustrFQON
 		, @ustrDatabaseName OUTPUT
 		, @ustrSchemaName OUTPUT
 		, @ustrTableOrObjName OUTPUT;
