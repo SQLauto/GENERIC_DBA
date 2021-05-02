@@ -7,7 +7,7 @@ GO
 -- Last Updated:	2021-04-24
 -- Description:		This will either add or wipe and update the comments on a table
 -- SubProcedures:	1.	[Utility].[DD].[prc_DBSchemaObjectAssignment]
---					2.  [Utility].[DD].[prc_TableExist]
+--					2.  [Utility].[DD].[TableExist]
 --					3.	[Utility].[DD].[fn_IsThisTheNameOfAView]
 -- TODO: 			Upon update add the old value to some sort of LogTable, along with the user doing it.
 -- ==========================================================================================

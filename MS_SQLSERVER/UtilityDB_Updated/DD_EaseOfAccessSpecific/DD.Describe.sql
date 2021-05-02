@@ -52,7 +52,7 @@ SET NOCOUNT ON;
 
 
 
-    EXEC Utility.DD.prc_TableExist @ustrTableorObjName
+    EXEC Utility.DD.TableExist @ustrTableorObjName
 	, @ustrDatabaseName
 	, @ustrSchemaName
 	, @bitSuccessFlag OUTPUT

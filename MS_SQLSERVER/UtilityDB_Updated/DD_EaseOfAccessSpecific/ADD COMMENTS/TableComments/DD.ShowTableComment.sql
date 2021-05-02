@@ -13,7 +13,7 @@ GO
 -- Description:		Checks to see if table comments exist
 -- Subprocedures: 	1. [Utility].[UTL].[fn_SuppressOutput]
 -- 					2. [Utility].[DD].[prc_DBSchemaObjectAssignment]
--- 					3. [Utility].[DD].[prc_TableExist]
+-- 					3. [Utility].[DD].[TableExist]
 --  				4. [Utility].[DD].[fn_IsThisTheNameOfAView]
 -- ==========================================================================================
 CREATE
@@ -68,7 +68,7 @@ BEGIN TRY
 		ELSE
 			SET @ustrViewOrTable = 'VIEW';
 
-	EXEC [Utility].[DD].[prc_TableExist] @ustrTableOrObjName
+	EXEC [Utility].[DD].[TableExist] @ustrTableOrObjName
 		, @ustrDatabaseName
 		, @ustrSchemaName
 		, @bitExistFlag OUTPUT
