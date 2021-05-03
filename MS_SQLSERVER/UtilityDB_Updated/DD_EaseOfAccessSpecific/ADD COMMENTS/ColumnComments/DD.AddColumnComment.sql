@@ -55,7 +55,7 @@ DECLARE @ustrVariantConv NVARCHAR(MAX) = REPLACE(CAST(@vrtComment AS NVARCHAR(MA
 BEGIN TRY
 	SET NOCOUNT ON;
 		--we do this type of insert to prevent seeing useless selects in the grid view on a SQL developer
-	EXEC Utility.DD.prc_DBSchemaObjectAssignment @ustrFQON
+	EXEC Utility.DD.DBSchemaObjectAssignment @ustrFQON
 												, @ustrDatabaseName OUTPUT
 												, @ustrSchemaName OUTPUT
 												, @ustrTableorObjName OUTPUT;
@@ -67,7 +67,7 @@ BEGIN TRY
 	 */
 
 	 
-	EXEC Utility.DD.prc_ColumnExist @ustrTableorObjName
+	EXEC Utility.DD.ColumnExist @ustrTableorObjName
 		, @strColumnName
 		, @ustrDatabaseName
 		, @ustrSchemaName

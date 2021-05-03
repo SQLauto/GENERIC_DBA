@@ -9,8 +9,8 @@ GO
 -- Last Updated:	2021-04-24
 -- Description:	    This procedure makes viewing comments on a single column much more accessible.
 -- Subprocedures: 	1. [Utility].[UTL].[fn_SuppressOutput]
--- 					2. [Utility].[DD].[prc_DBSchemaObjectAssignment]
--- 					3. [Utility].[DD].[prc_ColumnExist]
+-- 					2. [Utility].[DD].[DBSchemaObjectAssignment]
+-- 					3. [Utility].[DD].[ColumnExist]
 --  				4. [Utility].[DD].[fn_IsThisTheNameOfAView]
 -- ==========================================================================================
 CREATE or alter  PROCEDURE [DD].[ShowColumnComment] 
@@ -34,12 +34,12 @@ CREATE TABLE #__SuppressOutputColumnComment(
 	SuppressedOutput VARCHAR(MAX)
 )
 BEGIN TRY
-EXEC [Utility].[DD].[prc_DBSchemaObjectAssignment] @ustrFQON
+EXEC [Utility].[DD].[DBSchemaObjectAssignment] @ustrFQON
 	, @ustrDatabaseName OUTPUT
 	, @ustrSchemaName OUTPUT
 	, @ustrTableOrObjName OUTPUT;
 
-EXEC [Utility].[DD].[prc_ColumnExist] @ustrTableOrObjName
+EXEC [Utility].[DD].[ColumnExist] @ustrTableOrObjName
 	, @ustrColumnName
 	, @ustrDatabaseName
 	, @ustrSchemaName

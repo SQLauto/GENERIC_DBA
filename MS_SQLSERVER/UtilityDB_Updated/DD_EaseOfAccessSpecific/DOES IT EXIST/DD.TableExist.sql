@@ -1,6 +1,6 @@
 USE [Utility]
 GO
-/****** Object:  StoredProcedure [DD].[prc_TableExist]    Script Date: 4/28/2021 3:08:05 PM ******/
+/****** Object:  StoredProcedure [DD].[TableExist]    Script Date: 4/28/2021 3:08:05 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -16,7 +16,7 @@ GO
 ALTER
 	
 
- PROCEDURE [DD].[prc_TableExist] @ustrTableName NVARCHAR(64)
+ PROCEDURE [DD].[TableExist] @ustrTableName NVARCHAR(64)
 	, @ustrDBName NVARCHAR(64)
 	, --SHOULD BE PASSED IN FROM ANOTHER PROC
 	@ustrSchemaName NVARCHAR(64)

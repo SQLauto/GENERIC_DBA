@@ -7,7 +7,7 @@ GO
 -- Author:		Dave Babler
 -- Create date: 08/31/2020
 -- Description:	This returns a list of tables and comments based on a guessed name
--- Subprocedures: 1. DD.prc_DBSchemaObjectAssignment
+-- Subprocedures: 1. DD.DBSchemaObjectAssignment
 
 -- =============================================
 CREATE OR ALTER PROCEDURE DD.TableNameLike 
@@ -33,7 +33,7 @@ DECLARE @strTableNameLowerFuzzy NVARCHAR(80)
 	, @ustrObjectName NVARCHAR(64);
 
 
-EXEC DD.prc_DBSchemaObjectAssignment @strTableGuess, @ustrDatabaseName OUTPUT, @ustrSchemaName OUTPUT, @ustrObjectName OUTPUT;
+EXEC DD.DBSchemaObjectAssignment @strTableGuess, @ustrDatabaseName OUTPUT, @ustrSchemaName OUTPUT, @ustrObjectName OUTPUT;
 
 
 
