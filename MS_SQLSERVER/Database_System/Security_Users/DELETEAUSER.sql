@@ -1,9 +1,11 @@
 USE [master]
 GO
+
 DROP LOGIN yourloginhere
 GO
 
-EXECUTE master.sys.sp_MSforeachdb 'USE [?]; 
+EXECUTE master.sys.sp_MSforeachdb 
+	'USE [?]; 
     DECLARE @Tsql NVARCHAR(MAX)
     SET @Tsql = ''''
 
@@ -17,3 +19,5 @@ EXECUTE master.sys.sp_MSforeachdb 'USE [?];
 
 '
 GO
+
+

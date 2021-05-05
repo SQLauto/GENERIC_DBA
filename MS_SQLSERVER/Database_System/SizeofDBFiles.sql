@@ -30,3 +30,4 @@ WHERE dbName NOT IN ('distribution', 'master', 'model', 'msdb')
 
 --AND FreeSpaceMB < 100 ;
 DROP TABLE #FileSize;
+
