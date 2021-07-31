@@ -31,6 +31,9 @@ WHERE
 
 EXEC (@sql);
 
+EXEC sp_depends @objname = N'tablename'
+
+
 USE SharedData;
 GO
 
