@@ -2,12 +2,14 @@
 	Instructions: Fill your TableVariable 
 	Make sure you have the corresponding script.
 	Make sure that script has an INT that matches the variable here for the tracking table
-	also make sure it has the string char so you can build that list of tables and stuff */
+	also make sure it has the string char so you can build that list of tables and stuff
+	PRINT TO FILE OR TEXT DO NOT PRINT TO GRID */
 
-DECLARE @strOnlineOnOrOff CHAR(3) = 'O';
+DECLARE @strOnlineOnOrOff CHAR(3) = 'ON';
 DECLARE @ustrTableList NVARCHAR(2160);
 DECLARE @ustrInsertStatement NVARCHAR(MAX);
 DECLARE @ustrUpdateStatement NVARCHAR(MAX);
+DECLARE @intMaxIndexStatmentsBuilt INT = 0;
 
 DECLARE @tblTBlNamesToTarget TABLE
 (
@@ -25,9 +27,13 @@ VALUES
   , ('Department')
   , ('PhysicianMain')
   , ('PatientMain')
-  , ('PrepClass');
+  , ('PrepClass')
+  , ('PatientShippingInfo')
+  , ('ClinicShippingInfo')
+  , ('ClinicMain')
+  , ('OrderDeclined');
 
-SET @ustrUpdateStatement = N'UPDATE [LOADTEST].[EventTracker]
+SET @ustrUpdateStatement = N'UPDATE [CustomLog].[LOADTEST].[EventTracker]
    SET [EventEndingDateTime] = GETDATE()
    WHERE EventID =  @intEventID ;';
 
@@ -41,7 +47,7 @@ AS (SELECT
 		) AS "TableLister")
 	, PrepTheNoteVariable
 AS (SELECT	CONCAT(
-					  N'⚠AGGRESSIVE Index Hygiene was done on one of the following tables: '
+					  N'⚠AGGRESSIVE Index Hygiene (in chunks of ≈ 10 indicies) was done on one of the following tables: '
 					, SUBSTRING(TableLister, 0, LEN(TableLister) - 0)
 					, '.'
 				  ) AS "PreppedInfo"
@@ -49,7 +55,7 @@ AS (SELECT	CONCAT(
 SELECT @ustrTableList  = PreppedInfo FROM PrepTheNoteVariable  ;
 
 SELECT	@ustrInsertStatement = CONCAT(
-										 N'INSERT INTO [LOADTEST].[EventTracker]
+										 N'INSERT INTO [CustomLog].[LOADTEST].[EventTracker]
            ([SysObjTypeTested]
            ,[NameOfObjectTested]
            ,[CursorLoopCount]
@@ -122,7 +128,7 @@ AS (SELECT	GetIndexList.index_name AS "NoFFIndexName"
 					, CHAR(13)
 					, GetIndexList.table_view
 					, CHAR(32)
-					, 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ');'
+					, 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ' , MAXDOP=1);'
 				  ) AS "NoFFRebuildCommand"
 	FROM	GetIndexList
 	WHERE
@@ -138,16 +144,28 @@ AS (SELECT	GetIndexList.index_name AS "YesFFIndexName"
 		  , GetIndexList.[unique] AS "YesFFUnique"
 		  , GetIndexList.table_view AS "YesFFTableOrViewName"
 		  , GetIndexList.object_type AS "YesFFObjectType"
-		  , CONCAT(
+		  , CASE WHEN GetIndexList.index_type = 'Clustered Index' OR GetIndexList.[unique]  = 'Unique' THEN CONCAT(
 					  'ALTER INDEX '
 					, GetIndexList.index_name
 					, ' ON '
 					, CHAR(13)
 					, GetIndexList.table_view
 					, CHAR(32)
-					, 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 80);'
+					, 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 80, MAXDOP=1);'
 					, CHAR(13)
-				  ) AS "YesFFRebuildCommand"
+				  ) 
+				  ELSE 
+				  CONCAT(
+					  'ALTER INDEX '
+					, GetIndexList.index_name
+					, ' ON '
+					, CHAR(13)
+					, GetIndexList.table_view
+					, CHAR(32)
+					, 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 0, MAXDOP=1);'
+					, CHAR(13)
+				  ) 
+				  END AS "YesFFRebuildCommand"
 	FROM	GetIndexList
 	WHERE	NOT EXISTS
 		(
@@ -171,9 +189,14 @@ AS (SELECT	CASE
 				WHEN gur.RowCounter % 10 = 0
 					OR	gur.RowCounter = 1 THEN
 				CONCAT(CONCAT(CHAR(10), CHAR(13)), @ustrInsertStatement, CONCAT(CHAR(10), CHAR(13)), gur.IdxCommand)
-				WHEN CAST(RIGHT(CAST(gur.RowCounter AS NVARCHAR(16)), 1) AS INT) = 9 THEN
+				WHEN CAST(RIGHT(CAST(gur.RowCounter AS NVARCHAR(16)), 1) AS INT) = 9
+					OR	gur.RowCounter =
+						(
+							SELECT MAX(maxgur.RowCounter)FROM GetUnionAndRows AS   maxgur
+						) THEN
 				CONCAT(gur.IdxCommand, CONCAT(CHAR(10), CHAR(13), @ustrUpdateStatement, CONCAT(CHAR(10), CHAR(13))))
-				ELSE gur.IdxCommand
+				ELSE
+				IIF(gur.IdxCommand LIKE '%PK%', REPLACE(gur.IdxCommand, 'ONLINE=ON', 'ONLINE=OFF'), gur.IdxCommand)
 			END AS "Commands"
 	FROM	GetUnionAndRows AS gur)
 SELECT FinalEdits.Commands FROM		FinalEdits;
