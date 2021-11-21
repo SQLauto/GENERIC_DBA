@@ -13,14 +13,14 @@ BEGIN
 	);
 END;
 
-EXECUTE dbo.sp_MSforeachdb @command1 = 'IF ''?''  IN(''Carrier'', ''Pain'', ''SharedData'', ''Nuclear'', ''LegacyData'') BEGIN
+EXECUTE dbo.sp_MSforeachdb @command1 = 'IF ''?''  IN(''mapbenefits'', ''Utility'', ''Archival'', ''CustomLog'') BEGIN
     USE [?];
 
     INSERT  INTO #t_ObjectsOfInterest ( [DBName], [ObjectName], [Definition], [ObjectType] )
     SELECT  DB_NAME(), OBJECT_NAME( sm.object_id ), sm.definition, o.type
     FROM    sys.sql_modules sm
 	JOIN sys.objects AS o ON sm.object_id = o.object_id  
-    WHERE   definition LIKE ''%%CustomerServiceScriptInstruction%%'';
+  ;
 	END';
 GO
 
