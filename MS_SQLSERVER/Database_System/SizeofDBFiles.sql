@@ -31,3 +31,35 @@ WHERE dbName NOT IN ('distribution', 'master', 'model', 'msdb')
 --AND FreeSpaceMB < 100 ;
 DROP TABLE #FileSize;
 
+
+
+
+-- Review file properties, including file_id values to reference in shrink commands
+SELECT file_id,
+       name,
+       CAST(FILEPROPERTY(name, 'SpaceUsed') AS bigint) * 8 / 1024 /1024. AS space_used_gb,
+       CAST(size AS bigint) * 8 / 1024/1024. AS space_allocated_gb,
+       CAST(max_size AS bigint) * 8 / 1024/1024. AS max_size_gb
+FROM sys.database_files
+WHERE type_desc IN ('ROWS','LOG');
+GO
+
+
+
+
+
+;WITH GetSizeTotals AS (-- Review file properties, including file_id values to reference in shrink commands
+SELECT file_id AS FileID,
+       name AS FileName,
+       CAST(FILEPROPERTY(name, 'SpaceUsed') AS bigint) * 8 / 1024 /1024. AS space_used_gb,
+       CAST(size AS bigint) * 8 / 1024/1024. AS space_allocated_gb,
+       CAST(max_size AS bigint) * 8 / 1024/1024. AS max_size_gb
+FROM sys.database_files
+WHERE type_desc IN ('ROWS','LOG')
+)
+SELECT	FileName
+		, SUM(gst.space_used_gb) AS UsedSpace
+		, SUM(gst.space_allocated_gb) AS AllocatedSpace
+		, SUM(gst.max_size_gb) AS MaxSize
+FROM GetSizeTotals AS gst
+GROUP BY FileName WITH ROLLUP

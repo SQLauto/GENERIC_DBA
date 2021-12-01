@@ -1,0 +1,24 @@
+
+graph TD;
+subgraph fa:fa-crown Epic; 
+
+subgraph Non-Bug Work Items;
+WI1[Feature fa:fa-trophy] .->|May Generate| WI2[User Story &nbsp     fa:fa-book-open];
+WI2-->|Generates| WI3[Issue fa:fa-exclamation];
+WI1 .-> |May Generate| WI3;
+WI1 .-> |May Generate| R1;
+WI1 .-> |May Generate| T1;
+WI2 .-> |May Generate| R1;
+WI2 --> |Generates| T1;
+WI3 --> |Generates| T1;
+
+
+subgraph   ;
+R1(fa:fa-file-alt Research);
+end
+subgraph  ;
+T1(fa:fa-clipboard-check Task);
+end
+R1.->|May Generate|T1;
+end
+end

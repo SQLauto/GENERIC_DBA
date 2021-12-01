@@ -1,0 +1,21 @@
+SET
+enable_seqscan = OFF
+/*Run the command below copy and paste*/
+SELECT
+    'VACUUM FULL VERBOSE ANALYZE '
+       || table_name
+       || ';'
+FROM
+    information_schema.tables
+WHERE
+    table_schema = 'public'
+ORDER BY
+    table_schema
+    ,
+          table_name;
+
+/*AFTER TABLES done THEN DO */
+      
+      
+      SET
+enable_seqscan = ON
