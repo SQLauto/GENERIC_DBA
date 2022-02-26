@@ -1,4 +1,4 @@
-USE tempdb;
+vUSE tempdb;
 GO
 
 IF (OBJECT_ID('tempdb.dbo.#t_ObjectsOfInterest', 'U') IS NOT NULL)
@@ -31,7 +31,7 @@ SELECT	CASE
 			ELSE CONCAT('EXEC sp_recompile ', '''', ObjectName, '''', ';', @charHardReturn)
 		END AS "Command"
 FROM	#t_ObjectsOfInterest
-WHERE	DBName = 'SharedData';
+WHERE	DBName IN 'Mapbenefits, Utility, Archival';
 GO
 
 --DROP TABLE #t_ObjectsOfInterest;
