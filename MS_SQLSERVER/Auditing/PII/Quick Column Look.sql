@@ -6,19 +6,21 @@ DECLARE @sqlString NVARCHAR(800)
 , @strTable NVARCHAR(64)
 , @strColumn NVARCHAR(64);
 
-SET @strColumn = N'Master_Account__c';
-SET @strTable = N'ReportIcon';
-SET @sqlString = N' SELECT DISTINCT ' + QUOTENAME(TRIM(@strColumn)) + '
+SET @strColumn = N'Account_Mangement_Category__c';
+SET @strTable = N'SF1_TASK';
+
+SET @sqlStringForNulls = N' SELECT COUNT(DISTINCT ' + QUOTENAME(TRIM(@strColumn)) + ')  AS "CountedUniqueNonNullValues"'+
+                        'FROM ' + QUOTENAME(@strTable)  + 
+                        'WHERE ' + QUOTENAME(@strColumn)  + 'IS NOT NULL';
+
+SET @sqlString = N' SELECT DISTINCT ' + QUOTENAME(TRIM(@strColumn)) + ' AS "UniqueValues"
                     FROM ' + QUOTENAME(TRIM(@strTable)) ;
-PRINT @sqlString;
+
                     
-SET @sqlStringForNulls = N' SELECT DISTINCT ' + QUOTENAME(TRIM(@strColumn)) + 
-                    'FROM ' + QUOTENAME(@strTable)  + 
-                    'WHERE ' + QUOTENAME(@strColumn)  + 'IS NOT NULL';
 
 
-EXEC sp_executeSQL @sqlString, N'@strTable NVARCHAR(64), @strColumn NVARCHAR(64)', @strTable=@strTable, @strColumn=@strColumn;
 EXEC sp_executeSQL @sqlStringForNulls, N'@strTable NVARCHAR(64), @strColumn NVARCHAR(64)', @strTable=@strTable, @strColumn=@strColumn;
+EXEC sp_executeSQL @sqlString, N'@strTable NVARCHAR(64), @strColumn NVARCHAR(64)', @strTable=@strTable, @strColumn=@strColumn;
 
 
 
