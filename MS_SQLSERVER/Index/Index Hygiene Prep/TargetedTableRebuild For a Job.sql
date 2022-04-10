@@ -3,7 +3,7 @@ DBCC FREESYSTEMCACHE('ALL') WITH MARK_IN_USE_FOR_REMOVAL;
 USE mapbenefits;
 GO
 
-EXEC sp_MSforeachtable 'UPDATE STATISTICS ? WITH FULLSCAN;';
+EXEC sys.sp_MSforeachtable 'UPDATE STATISTICS ? WITH FULLSCAN;';
 GO
 DBCC FREESYSTEMCACHE('ALL') WITH MARK_IN_USE_FOR_REMOVAL;
 
@@ -12,10 +12,9 @@ GO
 
 DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT	@sql += N'EXEC sp_refreshview ''' + name + N'''' + CHAR(10)
-FROM	sys.objects
-WHERE
-	type IN ( 'V' );
+SELECT  @sql += N'EXEC sp_refreshview ''' + name + N'''' + CHAR(10)
+FROM    sys.objects
+WHERE   type IN ( 'V' );
 
 EXEC (@sql);
 
@@ -24,14 +23,13 @@ GO
 
 DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT	@sql += N'EXEC sp_recompile ''' + name + N'''' + CHAR(10) + 'GO' + CHAR(13)
-FROM	sys.objects
-WHERE
-	type IN ( 'P', 'FN', 'IF' );
+SELECT  @sql += N'EXEC sp_recompile ''' + name + N'''' + CHAR(10)   /*+ 'GO' + CHAR(13) --uncomment if need to print  */
+FROM    sys.objects
+WHERE   type IN ( 'P', 'FN', 'IF' );
 
 EXEC (@sql);
 
-EXEC sp_depends @objname = N'tablename'
+EXEC sys.sp_depends @objname = N'tablename';
 
 
 USE mapbenefits;

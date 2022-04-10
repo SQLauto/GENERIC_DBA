@@ -46,7 +46,7 @@ SELECT  @ustrInsertStatement = CONCAT(
 ;WITH GetIndexList
    AS (   SELECT    CAST(i.name AS NVARCHAR(80))                          AS "index_name"
                   , SUBSTRING(D.column_names, 1, LEN(D.column_names) - 1) AS "columns"
-                  , CASE
+                  , CASE  --MAINT SCRIPT NOT PRODUCTION CUSTOMER SCRIPT more important for DBA to know what's up than speed
                          WHEN i.type = 1 THEN
                              'Clustered index'
                          WHEN i.type = 2 THEN
@@ -68,7 +68,7 @@ SELECT  @ustrInsertStatement = CONCAT(
                          ELSE
                              'Not unique'
                     END                                                   AS "unique"
-                  , SCHEMA_NAME(t.schema_id) + '.' + t.name               AS "table_view"
+                  , CONCAT('[', SCHEMA_NAME(t.schema_id) , ']') + '.' + CONCAT('[', t.name, ']')               AS "table_view"
                   , CASE
                          WHEN t.type = 'U' THEN
                              'Table'
@@ -93,7 +93,10 @@ SELECT  @ustrInsertStatement = CONCAT(
               FOR XML PATH('')
           )                                      AS D(column_names)
           WHERE i.index_id > 0
-		  AND OBJECT_SCHEMA_NAME(t.object_id) <> 'sys')
+		  AND OBJECT_SCHEMA_NAME(t.object_id) <> 'sys'
+          AND t.type <> 'TF'
+ )
+       
     , GetNoFillFactorIdxs
    AS (   SELECT    GetIndexList.index_name  AS "NoFFIndexName"
                   , GetIndexList.columns     AS "NoFFColumns"
@@ -116,6 +119,26 @@ SELECT  @ustrInsertStatement = CONCAT(
                     OR  GetIndexList.columns LIKE '%date%'
                 )
                 AND LEN(GetIndexList.columns) < 64
+            UNION 
+            /*The ColumnStores cannot have a fill factor, so it's best to just grab them right here as their
+                own relational set and union them to the  other non Fill Factors*/
+     SELECT    GetIndexList.index_name  AS "NoFFIndexName"
+                  , GetIndexList.columns     AS "NoFFColumns"
+                  , GetIndexList.index_type  AS "NoFFIndexType"
+                  , GetIndexList.[unique]    AS "NoFFUnique"
+                  , GetIndexList.table_view  AS "NoFFTableorViewName"
+                  , GetIndexList.object_type AS "NoFFObjectType"
+                  , CONCAT(
+                              'ALTER INDEX '
+                            , CONCAT('[', GetIndexList.index_name, ']')
+                            , ' ON '
+                            , CHAR(13)
+                            , GetIndexList.table_view
+                            , CHAR(32)
+                            , 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ' , MAXDOP=1);'
+                          )                  AS "NoFFRebuildCommand"
+          FROM  GetIndexList
+    WHERE index_type IN ('Clustered columnstore index', 'Nonclustered columnstore index')
 			)
     , GetFillFactorIndexes
    AS (   SELECT    CONCAT('[', GetIndexList.index_name, ']') AS "YesFFIndexName"
@@ -134,7 +157,7 @@ SELECT  @ustrInsertStatement = CONCAT(
                                      , CHAR(13)
                                      , GetIndexList.table_view
                                      , CHAR(32)
-                                     , 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 80, MAXDOP=1);'
+                                     , 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 80, MAXDOP=1);'  ---fill factor goes here 
                                      , CHAR(13)
                                    )
                          ELSE
@@ -145,7 +168,7 @@ SELECT  @ustrInsertStatement = CONCAT(
                                      , CHAR(13)
                                      , GetIndexList.table_view
                                      , CHAR(32)
-                                     , 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 100, MAXDOP=1);'
+                                     , 'REBUILD WITH (ONLINE=' + @strOnlineOnOrOff + ', FILLFACTOR = 100, MAXDOP=1);'  /*Maximum degree of parallellism must be set to 1 or the whole thing implodes*/
                                      , CHAR(13)
                                    )
                     END                      AS "YesFFRebuildCommand"
@@ -188,7 +211,7 @@ SELECT  @ustrInsertStatement = CONCAT(
                                    )
                          ELSE
                              IIF(gur.IdxCommand LIKE '%PK%'
-                              , REPLACE(gur.IdxCommand, 'ONLINE=OFF', 'ONLINE=OFF')
+                              , REPLACE(gur.IdxCommand, 'ONLINE=ON', 'ONLINE=OFF') --SWITCH if we need to leave tables online during rebuild
                               , gur.IdxCommand)
                     END AS "Commands"
           FROM  GetUnionAndRows AS gur)
