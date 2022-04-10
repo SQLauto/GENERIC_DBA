@@ -1,3 +1,4 @@
+
 DBCC FREESYSTEMCACHE('ALL') WITH MARK_IN_USE_FOR_REMOVAL;
 
 USE REPLACEWITHDBNAME;
@@ -12,9 +13,9 @@ GO
 
 DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT  @sql += N'EXEC sp_refreshview ' + N'[' + SCHEMA_NAME(schema_id) + N'].[' + name + N']' + CHAR(10)   /*+ 'GO' + CHAR(13) --uncomment if need to print  */
+SELECT  @sql += N'EXEC sp_refreshview ' + N'''' + SCHEMA_NAME(schema_id) + N'.' + name + N'''' + CHAR(10) /*+ 'GO' + CHAR(13) --uncomment if need to print  */
 FROM    sys.objects
-WHERE   type IN ( 'V' );    ---ADD SCHEMA!!!!
+WHERE   type IN ( 'V' );    
 
 EXEC (@sql);
 
@@ -23,13 +24,12 @@ GO
 
 DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT  @sql += N'EXEC sp_recompile ' + N'[' + SCHEMA_NAME(schema_id) + N'].[' + name + N']' + CHAR(10) /*+ 'GO' + CHAR(13) --uncomment if need to print  */
+SELECT  @sql += N'EXEC sp_recompile ' + N'''' + SCHEMA_NAME(schema_id) + N'.' + name + N'''' + CHAR(10) /*+ 'GO' + CHAR(13) --uncomment if need to print  */
 FROM    sys.objects
 WHERE   type IN ( 'P', 'FN', 'IF' );
 
 EXEC (@sql);
 
-EXEC sys.sp_depends @objname = N'tablename';
 
 
 USE REPLACEWITHDBNAME;
@@ -52,3 +52,6 @@ DBCC FREESYSTEMCACHE(@ustrDBNAME);
 
 DBCC FLUSHPROCINDB(@intDBID);
 DBCC FREESYSTEMCACHE('ALL') WITH MARK_IN_USE_FOR_REMOVAL;
+
+
+--EXEC sys.sp_depends @objname = N'tablename';
