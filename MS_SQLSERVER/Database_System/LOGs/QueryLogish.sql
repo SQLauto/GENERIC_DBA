@@ -1,11 +1,101 @@
 /**This is about as good of a quick look at the query log as you'll get.
 It isn't great, sorry --Dave Babler */
 
-SELECT  *
-    --use only text to see relevant query information
-FROM    
-  sys.dm_exec_query_stats STATS
-CROSS APPLY 
-  sys.dm_exec_sql_text(STATS.sql_handle) 
- -- Note that this is a function which takes in sql_handle as parameter
-ORDER BY last_execution_time DESC
+SELECT  STATS.sql_handle
+      , STATS.statement_start_offset
+      , STATS.statement_end_offset
+      , STATS.plan_generation_num
+      , STATS.plan_handle
+      , STATS.creation_time
+      , STATS.last_execution_time
+      , STATS.execution_count
+      , STATS.total_worker_time
+      , STATS.last_worker_time
+      , STATS.min_worker_time
+      , STATS.max_worker_time
+      , STATS.total_physical_reads
+      , STATS.last_physical_reads
+      , STATS.min_physical_reads
+      , STATS.max_physical_reads
+      , STATS.total_logical_writes
+      , STATS.last_logical_writes
+      , STATS.min_logical_writes
+      , STATS.max_logical_writes
+      , STATS.total_logical_reads
+      , STATS.last_logical_reads
+      , STATS.min_logical_reads
+      , STATS.max_logical_reads
+      , STATS.total_clr_time
+      , STATS.last_clr_time
+      , STATS.min_clr_time
+      , STATS.max_clr_time
+      , STATS.total_elapsed_time
+      , STATS.last_elapsed_time
+      , STATS.min_elapsed_time
+      , STATS.max_elapsed_time
+      , STATS.query_hash
+      , STATS.query_plan_hash
+      , STATS.total_rows
+      , STATS.last_rows
+      , STATS.min_rows
+      , STATS.max_rows
+      , STATS.statement_sql_handle
+      , STATS.statement_context_id
+      , STATS.total_dop
+      , STATS.last_dop
+      , STATS.min_dop
+      , STATS.max_dop
+      , STATS.total_grant_kb
+      , STATS.last_grant_kb
+      , STATS.min_grant_kb
+      , STATS.max_grant_kb
+      , STATS.total_used_grant_kb
+      , STATS.last_used_grant_kb
+      , STATS.min_used_grant_kb
+      , STATS.max_used_grant_kb
+      , STATS.total_ideal_grant_kb
+      , STATS.last_ideal_grant_kb
+      , STATS.min_ideal_grant_kb
+      , STATS.max_ideal_grant_kb
+      , STATS.total_reserved_threads
+      , STATS.last_reserved_threads
+      , STATS.min_reserved_threads
+      , STATS.max_reserved_threads
+      , STATS.total_used_threads
+      , STATS.last_used_threads
+      , STATS.min_used_threads
+      , STATS.max_used_threads
+      , STATS.total_columnstore_segment_reads
+      , STATS.last_columnstore_segment_reads
+      , STATS.min_columnstore_segment_reads
+      , STATS.max_columnstore_segment_reads
+      , STATS.total_columnstore_segment_skips
+      , STATS.last_columnstore_segment_skips
+      , STATS.min_columnstore_segment_skips
+      , STATS.max_columnstore_segment_skips
+      , STATS.total_spills
+      , STATS.last_spills
+      , STATS.min_spills
+      , STATS.max_spills
+      , STATS.total_num_physical_reads
+      , STATS.last_num_physical_reads
+      , STATS.min_num_physical_reads
+      , STATS.max_num_physical_reads
+      , STATS.total_page_server_reads
+      , STATS.last_page_server_reads
+      , STATS.min_page_server_reads
+      , STATS.max_page_server_reads
+      , STATS.total_num_page_server_reads
+      , STATS.last_num_page_server_reads
+      , STATS.min_num_page_server_reads
+      , STATS.max_num_page_server_reads
+      , dbid
+      , objectid
+      , number
+      , encrypted
+      , text
+--use only text to see relevant query information
+FROM    sys.dm_exec_query_stats STATS
+    CROSS APPLY sys.dm_exec_sql_text(STATS.sql_handle)
+-- Note that this is a function which takes in sql_handle as parameter
+ORDER BY last_execution_time DESC;
